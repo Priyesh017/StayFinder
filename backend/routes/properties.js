@@ -1,31 +1,342 @@
 const express = require("express");
-const { body, validationResult } = require("express-validator");
-const { query, getClient } = require("../config/database");
-const { authenticateToken } = require("../middleware/auth");
+const {
+  body,
+  query: expressQuery,
+  validationResult,
+} = require("express-validator");
+const { query } = require("../config/database");
+const { authenticateToken, requireHost } = require("../middleware/auth");
 
 const router = express.Router();
 
-// Create new booking
+// Get all properties with optional filtering
+router.get("/", async (req, res) => {
+  try {
+    const {
+      city,
+      propertyType,
+      minPrice,
+      maxPrice,
+      guests,
+      page = 1,
+      limit = 12,
+    } = req.query;
+
+    let queryText = `
+      SELECT 
+        p.*,
+        u.first_name || ' ' || u.last_name as host_name,
+        COALESCE(AVG(r.rating), 0) as avg_rating,
+        COUNT(DISTINCT r.id) as review_count,
+        array_agg(DISTINCT pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL) as images
+      FROM properties p
+      LEFT JOIN users u ON p.host_id = u.id
+      LEFT JOIN reviews r ON p.id = r.property_id
+      LEFT JOIN property_images pi ON p.id = pi.property_id
+      WHERE p.is_active = true
+    `;
+
+    const queryParams = [];
+    let paramCount = 0;
+
+    if (city) {
+      paramCount++;
+      queryText += ` AND LOWER(p.city) LIKE LOWER($${paramCount})`;
+      queryParams.push(`%${city}%`);
+    }
+
+    if (propertyType) {
+      paramCount++;
+      queryText += ` AND p.property_type = $${paramCount}`;
+      queryParams.push(propertyType);
+    }
+
+    if (minPrice) {
+      paramCount++;
+      queryText += ` AND p.price_per_night >= $${paramCount}`;
+      queryParams.push(Number.parseFloat(minPrice));
+    }
+
+    if (maxPrice) {
+      paramCount++;
+      queryText += ` AND p.price_per_night <= $${paramCount}`;
+      queryParams.push(Number.parseFloat(maxPrice));
+    }
+
+    if (guests) {
+      paramCount++;
+      queryText += ` AND p.max_guests >= $${paramCount}`;
+      queryParams.push(Number.parseInt(guests));
+    }
+
+    queryText += `
+      GROUP BY p.id, u.first_name, u.last_name
+      ORDER BY p.created_at DESC
+      LIMIT $${paramCount + 1} OFFSET $${paramCount + 2}
+    `;
+
+    queryParams.push(
+      Number.parseInt(limit),
+      (Number.parseInt(page) - 1) * Number.parseInt(limit)
+    );
+
+    const result = await query(queryText, queryParams);
+
+    const properties = result.rows.map((row) => ({
+      id: row.id.toString(),
+      title: row.title,
+      location: `${row.city}, ${row.state || row.country}`,
+      price: Number.parseFloat(row.price_per_night),
+      rating: Number.parseFloat(row.avg_rating) || 0,
+      reviews: Number.parseInt(row.review_count) || 0,
+      images: row.images || ["/placeholder.svg?height=300&width=400"],
+      host: row.host_name,
+      type: row.property_type,
+      guests: row.max_guests,
+      bedrooms: row.bedrooms,
+      bathrooms: row.bathrooms,
+    }));
+
+    res.json(properties);
+  } catch (error) {
+    console.error("Get properties error:", error);
+    res.status(500).json({ error: "Failed to fetch properties" });
+  }
+});
+
+// Get single property by ID - Updated to match frontend expectations
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      `
+      SELECT 
+        p.*,
+        u.first_name || ' ' || u.last_name as host_name,
+        u.created_at as host_joined,
+        COALESCE(AVG(r.rating), 0) as avg_rating,
+        COUNT(DISTINCT r.id) as review_count,
+        array_agg(DISTINCT pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL) as images
+      FROM properties p
+      LEFT JOIN users u ON p.host_id = u.id
+      LEFT JOIN reviews r ON p.id = r.property_id
+      LEFT JOIN property_images pi ON p.id = pi.property_id
+      WHERE p.id = $1 AND p.is_active = true
+      GROUP BY p.id, u.first_name, u.last_name, u.created_at
+    `,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
+    const property = result.rows[0];
+
+    res.json({
+      id: property.id.toString(),
+      title: property.title,
+      description: property.description,
+      location: `${property.city}, ${property.state || property.country}`,
+      price: Number.parseFloat(property.price_per_night),
+      rating: Number.parseFloat(property.avg_rating) || 0,
+      reviews: Number.parseInt(property.review_count) || 0,
+      images: property.images || ["/placeholder.svg?height=400&width=600"],
+      host: {
+        name: property.host_name,
+        avatar: "/placeholder.svg?height=100&width=100",
+        joinedDate: new Date(property.host_joined).getFullYear().toString(),
+        verified: true,
+        responseRate: 98,
+        responseTime: "within an hour",
+      },
+      type: property.property_type,
+      guests: property.max_guests,
+      bedrooms: property.bedrooms,
+      bathrooms: property.bathrooms,
+      amenities: property.amenities || [
+        "WiFi",
+        "Kitchen",
+        "Air conditioning",
+        "Heating",
+        "TV",
+        "Washer",
+        "Dryer",
+        "Parking",
+      ],
+      rules: property.house_rules || [
+        "Check-in: 3:00 PM - 11:00 PM",
+        "Checkout: 11:00 AM",
+        "No smoking",
+        "No pets",
+        "No parties or events",
+      ],
+      checkInTime: property.check_in_time,
+      checkOutTime: property.check_out_time,
+    });
+  } catch (error) {
+    console.error("Get property error:", error);
+    res.status(500).json({ error: "Failed to fetch property" });
+  }
+});
+
+// Search properties - Updated to match frontend search functionality
+router.post("/search", async (req, res) => {
+  try {
+    const {
+      location,
+      checkIn,
+      checkOut,
+      guests,
+      propertyType,
+      minPrice,
+      maxPrice,
+    } = req.body;
+
+    let queryText = `
+      SELECT 
+        p.*,
+        u.first_name || ' ' || u.last_name as host_name,
+        COALESCE(AVG(r.rating), 0) as avg_rating,
+        COUNT(DISTINCT r.id) as review_count,
+        array_agg(DISTINCT pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL) as images
+      FROM properties p
+      LEFT JOIN users u ON p.host_id = u.id
+      LEFT JOIN reviews r ON p.id = r.property_id
+      LEFT JOIN property_images pi ON p.id = pi.property_id
+      WHERE p.is_active = true
+    `;
+
+    const queryParams = [];
+    let paramCount = 0;
+
+    if (location) {
+      paramCount++;
+      queryText += ` AND (LOWER(p.city) LIKE LOWER($${paramCount}) OR LOWER(p.address) LIKE LOWER($${paramCount}) OR LOWER(p.title) LIKE LOWER($${paramCount}))`;
+      queryParams.push(`%${location}%`);
+    }
+
+    if (guests) {
+      paramCount++;
+      queryText += ` AND p.max_guests >= $${paramCount}`;
+      queryParams.push(Number.parseInt(guests));
+    }
+
+    if (propertyType) {
+      paramCount++;
+      queryText += ` AND p.property_type = $${paramCount}`;
+      queryParams.push(propertyType);
+    }
+
+    if (minPrice) {
+      paramCount++;
+      queryText += ` AND p.price_per_night >= $${paramCount}`;
+      queryParams.push(Number.parseFloat(minPrice));
+    }
+
+    if (maxPrice) {
+      paramCount++;
+      queryText += ` AND p.price_per_night <= $${paramCount}`;
+      queryParams.push(Number.parseFloat(maxPrice));
+    }
+
+    // Check availability if dates provided
+    if (checkIn && checkOut) {
+      queryText += `
+        AND p.id NOT IN (
+          SELECT DISTINCT property_id 
+          FROM bookings 
+          WHERE booking_status IN ('confirmed', 'pending')
+          AND (
+            (check_in_date <= $${paramCount + 1} AND check_out_date > $${
+        paramCount + 1
+      })
+            OR (check_in_date < $${paramCount + 2} AND check_out_date >= $${
+        paramCount + 2
+      })
+            OR (check_in_date >= $${paramCount + 1} AND check_out_date <= $${
+        paramCount + 2
+      })
+          )
+        )
+      `;
+      queryParams.push(checkIn, checkOut);
+      paramCount += 2;
+    }
+
+    queryText += `
+      GROUP BY p.id, u.first_name, u.last_name
+      ORDER BY p.created_at DESC
+    `;
+
+    const result = await query(queryText, queryParams);
+
+    const properties = result.rows.map((row) => ({
+      id: row.id.toString(),
+      title: row.title,
+      location: `${row.city}, ${row.state || row.country}`,
+      price: Number.parseFloat(row.price_per_night),
+      rating: Number.parseFloat(row.avg_rating) || 0,
+      reviews: Number.parseInt(row.review_count) || 0,
+      images: row.images || ["/placeholder.svg?height=300&width=400"],
+      host: row.host_name,
+      type: row.property_type,
+      guests: row.max_guests,
+      bedrooms: row.bedrooms,
+      bathrooms: row.bathrooms,
+    }));
+
+    res.json(properties);
+  } catch (error) {
+    console.error("Search properties error:", error);
+    res.status(500).json({ error: "Search failed" });
+  }
+});
+
+// Create new property (hosts only)
 router.post(
   "/",
   authenticateToken,
+  requireHost,
   [
-    body("propertyId")
+    body("title").trim().isLength({ min: 1 }).withMessage("Title is required"),
+    body("description")
+      .trim()
+      .isLength({ min: 10 })
+      .withMessage("Description must be at least 10 characters"),
+    body("propertyType").isIn([
+      "apartment",
+      "house",
+      "villa",
+      "condo",
+      "cabin",
+      "loft",
+      "townhouse",
+    ]),
+    body("address")
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Address is required"),
+    body("city").trim().isLength({ min: 1 }).withMessage("City is required"),
+    body("country")
+      .trim()
+      .isLength({ min: 1 })
+      .withMessage("Country is required"),
+    body("pricePerNight")
+      .isFloat({ min: 0 })
+      .withMessage("Price must be a positive number"),
+    body("maxGuests")
       .isInt({ min: 1 })
-      .withMessage("Valid property ID is required"),
-    body("checkInDate")
-      .isISO8601()
-      .withMessage("Valid check-in date is required"),
-    body("checkOutDate")
-      .isISO8601()
-      .withMessage("Valid check-out date is required"),
-    body("numGuests")
+      .withMessage("Max guests must be at least 1"),
+    body("bedrooms")
+      .isInt({ min: 0 })
+      .withMessage("Bedrooms must be a non-negative number"),
+    body("bathrooms")
       .isInt({ min: 1 })
-      .withMessage("Number of guests must be at least 1"),
+      .withMessage("Bathrooms must be at least 1"),
   ],
   async (req, res) => {
-    const client = await getClient();
-
     try {
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
@@ -33,384 +344,216 @@ router.post(
       }
 
       const {
-        propertyId,
-        checkInDate,
-        checkOutDate,
-        numGuests,
-        specialRequests,
+        title,
+        description,
+        propertyType,
+        address,
+        city,
+        state,
+        country,
+        postalCode,
+        pricePerNight,
+        maxGuests,
+        bedrooms,
+        bathrooms,
+        amenities = [],
+        houseRules = [],
       } = req.body;
 
-      await client.query("BEGIN");
-
-      // Check if property exists and is active
-      const propertyResult = await client.query(
-        "SELECT * FROM properties WHERE id = $1 AND is_active = true",
-        [propertyId]
-      );
-
-      if (propertyResult.rows.length === 0) {
-        await client.query("ROLLBACK");
-        return res
-          .status(404)
-          .json({ error: "Property not found or not available" });
-      }
-
-      const property = propertyResult.rows[0];
-
-      // Validate dates
-      const checkIn = new Date(checkInDate);
-      const checkOut = new Date(checkOutDate);
-      const today = new Date();
-
-      if (checkIn < today) {
-        await client.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({ error: "Check-in date cannot be in the past" });
-      }
-
-      if (checkOut <= checkIn) {
-        await client.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({ error: "Check-out date must be after check-in date" });
-      }
-
-      // Check guest capacity
-      if (numGuests > property.max_guests) {
-        await client.query("ROLLBACK");
-        return res.status(400).json({
-          error: `Property can accommodate maximum ${property.max_guests} guests`,
-        });
-      }
-
-      // Check availability
-      const conflictingBookings = await client.query(
+      const result = await query(
         `
-      SELECT id FROM bookings 
-      WHERE property_id = $1 
-      AND booking_status IN ('confirmed', 'pending')
-      AND (
-        (check_in_date <= $2 AND check_out_date > $2)
-        OR (check_in_date < $3 AND check_out_date >= $3)
-        OR (check_in_date >= $2 AND check_out_date <= $3)
-      )
-    `,
-        [propertyId, checkInDate, checkOutDate]
-      );
-
-      if (conflictingBookings.rows.length > 0) {
-        await client.query("ROLLBACK");
-        return res
-          .status(400)
-          .json({ error: "Property is not available for selected dates" });
-      }
-
-      // Calculate total amount
-      const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-      const totalAmount = nights * Number.parseFloat(property.price_per_night);
-
-      // Create booking
-      const bookingResult = await client.query(
-        `
-      INSERT INTO bookings (
-        property_id, guest_id, check_in_date, check_out_date, 
-        num_guests, total_amount, special_requests
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO properties (
+        host_id, title, description, property_type, address, city, state, country, 
+        postal_code, price_per_night, max_guests, bedrooms, bathrooms, amenities, house_rules
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `,
         [
-          propertyId,
           req.user.id,
-          checkInDate,
-          checkOutDate,
-          numGuests,
-          totalAmount,
-          specialRequests,
+          title,
+          description,
+          propertyType,
+          address,
+          city,
+          state,
+          country,
+          postalCode,
+          pricePerNight,
+          maxGuests,
+          bedrooms,
+          bathrooms,
+          amenities,
+          houseRules,
         ]
       );
 
-      await client.query("COMMIT");
-
       res.status(201).json({
-        message: "Booking created successfully",
-        booking: bookingResult.rows[0],
+        message: "Property created successfully",
+        property: result.rows[0],
       });
     } catch (error) {
-      await client.query("ROLLBACK");
-      console.error("Create booking error:", error);
-      res.status(500).json({ error: "Failed to create booking" });
-    } finally {
-      client.release();
+      console.error("Create property error:", error);
+      res.status(500).json({ error: "Failed to create property" });
     }
   }
 );
 
-// Get user's bookings (guest)
-router.get("/user", authenticateToken, async (req, res) => {
+// Update property (host only, own properties)
+router.put("/:id", authenticateToken, requireHost, async (req, res) => {
   try {
-    const result = await query(
-      `
-      SELECT 
-        b.*,
-        p.title as property_title,
-        p.city,
-        p.state,
-        p.country,
-        u.first_name || ' ' || u.last_name as host_name
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      JOIN users u ON p.host_id = u.id
-      WHERE b.guest_id = $1
-      ORDER BY b.created_at DESC
-    `,
-      [req.user.id]
+    const { id } = req.params;
+
+    // Check if property belongs to the authenticated user
+    const propertyCheck = await query(
+      "SELECT host_id FROM properties WHERE id = $1",
+      [id]
     );
 
-    const bookings = result.rows.map((row) => ({
-      id: row.id,
-      propertyTitle: row.property_title,
-      location: `${row.city}, ${row.state || row.country}`,
-      hostName: row.host_name,
-      checkInDate: row.check_in_date,
-      checkOutDate: row.check_out_date,
-      numGuests: row.num_guests,
-      totalAmount: Number.parseFloat(row.total_amount),
-      status: row.booking_status,
-      paymentStatus: row.payment_status,
-      specialRequests: row.special_requests,
-      createdAt: row.created_at,
-    }));
+    if (propertyCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Property not found" });
+    }
 
-    res.json(bookings);
+    if (propertyCheck.rows[0].host_id !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "You can only update your own properties" });
+    }
+
+    const {
+      title,
+      description,
+      pricePerNight,
+      maxGuests,
+      amenities,
+      houseRules,
+      isActive,
+    } = req.body;
+
+    const result = await query(
+      `
+      UPDATE properties 
+      SET title = COALESCE($1, title),
+          description = COALESCE($2, description),
+          price_per_night = COALESCE($3, price_per_night),
+          max_guests = COALESCE($4, max_guests),
+          amenities = COALESCE($5, amenities),
+          house_rules = COALESCE($6, house_rules),
+          is_active = COALESCE($7, is_active),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $8
+      RETURNING *
+    `,
+      [
+        title,
+        description,
+        pricePerNight,
+        maxGuests,
+        amenities,
+        houseRules,
+        isActive,
+        id,
+      ]
+    );
+
+    res.json({
+      message: "Property updated successfully",
+      property: result.rows[0],
+    });
   } catch (error) {
-    console.error("Get user bookings error:", error);
-    res.status(500).json({ error: "Failed to fetch bookings" });
+    console.error("Update property error:", error);
+    res.status(500).json({ error: "Failed to update property" });
   }
 });
 
-// Get host's bookings
-router.get("/host", authenticateToken, async (req, res) => {
+// Delete property (host only, own properties)
+router.delete("/:id", authenticateToken, requireHost, async (req, res) => {
   try {
-    const result = await query(
-      `
-      SELECT 
-        b.*,
-        p.title as property_title,
-        u.first_name || ' ' || u.last_name as guest_name,
-        u.email as guest_email
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      JOIN users u ON b.guest_id = u.id
-      WHERE p.host_id = $1
-      ORDER BY b.created_at DESC
-    `,
-      [req.user.id]
+    const { id } = req.params;
+
+    // Check if property belongs to the authenticated user
+    const propertyCheck = await query(
+      "SELECT host_id FROM properties WHERE id = $1",
+      [id]
     );
 
-    const bookings = result.rows.map((row) => ({
-      id: row.id,
-      propertyTitle: row.property_title,
-      guestName: row.guest_name,
-      guestEmail: row.guest_email,
-      checkInDate: row.check_in_date,
-      checkOutDate: row.check_out_date,
-      numGuests: row.num_guests,
-      totalAmount: Number.parseFloat(row.total_amount),
-      status: row.booking_status,
-      paymentStatus: row.payment_status,
-      specialRequests: row.special_requests,
-      createdAt: row.created_at,
-    }));
+    if (propertyCheck.rows.length === 0) {
+      return res.status(404).json({ error: "Property not found" });
+    }
 
-    res.json(bookings);
+    if (propertyCheck.rows[0].host_id !== req.user.id) {
+      return res
+        .status(403)
+        .json({ error: "You can only delete your own properties" });
+    }
+
+    // Check for active bookings
+    const activeBookings = await query(
+      "SELECT id FROM bookings WHERE property_id = $1 AND booking_status IN ($2, $3)",
+      [id, "confirmed", "pending"]
+    );
+
+    if (activeBookings.rows.length > 0) {
+      return res.status(400).json({
+        error: "Cannot delete property with active bookings",
+      });
+    }
+
+    await query("DELETE FROM properties WHERE id = $1", [id]);
+
+    res.json({ message: "Property deleted successfully" });
   } catch (error) {
-    console.error("Get host bookings error:", error);
-    res.status(500).json({ error: "Failed to fetch bookings" });
+    console.error("Delete property error:", error);
+    res.status(500).json({ error: "Failed to delete property" });
   }
 });
 
-// Update booking status (host only)
-router.patch(
-  "/:id/status",
+// Get host's properties - Updated for dashboard
+router.get(
+  "/host/my-properties",
   authenticateToken,
-  [
-    body("status")
-      .isIn(["pending", "confirmed", "cancelled"])
-      .withMessage("Invalid status"),
-  ],
+  requireHost,
   async (req, res) => {
     try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-
-      const { id } = req.params;
-      const { status } = req.body;
-
-      // Check if booking exists and user is the host
-      const bookingCheck = await query(
-        `
-      SELECT b.*, p.host_id 
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      WHERE b.id = $1
-    `,
-        [id]
-      );
-
-      if (bookingCheck.rows.length === 0) {
-        return res.status(404).json({ error: "Booking not found" });
-      }
-
-      const booking = bookingCheck.rows[0];
-
-      if (booking.host_id !== req.user.id) {
-        return res
-          .status(403)
-          .json({ error: "You can only update bookings for your properties" });
-      }
-
-      // Update booking status
       const result = await query(
         `
-      UPDATE bookings 
-      SET booking_status = $1, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-      RETURNING *
+      SELECT 
+        p.*,
+        COALESCE(AVG(r.rating), 0) as avg_rating,
+        COUNT(DISTINCT r.id) as review_count,
+        COUNT(DISTINCT b.id) FILTER (WHERE b.booking_status = 'confirmed' AND EXTRACT(MONTH FROM b.created_at) = EXTRACT(MONTH FROM CURRENT_DATE)) as monthly_bookings,
+        array_agg(DISTINCT pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL) as images
+      FROM properties p
+      LEFT JOIN reviews r ON p.id = r.property_id
+      LEFT JOIN bookings b ON p.id = b.property_id
+      LEFT JOIN property_images pi ON p.id = pi.property_id
+      WHERE p.host_id = $1
+      GROUP BY p.id
+      ORDER BY p.created_at DESC
     `,
-        [status, id]
+        [req.user.id]
       );
 
-      res.json({
-        message: "Booking status updated successfully",
-        booking: result.rows[0],
-      });
+      const properties = result.rows.map((row) => ({
+        id: row.id.toString(),
+        title: row.title,
+        location: `${row.city}, ${row.state || row.country}`,
+        price: Number.parseFloat(row.price_per_night),
+        status: row.is_active ? "active" : "inactive",
+        bookings: Number.parseInt(row.monthly_bookings) || 0,
+        rating: Number.parseFloat(row.avg_rating) || 0,
+        reviews: Number.parseInt(row.review_count) || 0,
+        image:
+          row.images && row.images.length > 0
+            ? row.images[0]
+            : "/placeholder.svg?height=80&width=120",
+      }));
+
+      res.json(properties);
     } catch (error) {
-      console.error("Update booking status error:", error);
-      res.status(500).json({ error: "Failed to update booking status" });
+      console.error("Get host properties error:", error);
+      res.status(500).json({ error: "Failed to fetch properties" });
     }
   }
 );
-
-// Cancel booking (guest only, own bookings)
-router.patch("/:id/cancel", authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Check if booking exists and belongs to user
-    const bookingCheck = await query(
-      "SELECT * FROM bookings WHERE id = $1 AND guest_id = $2",
-      [id, req.user.id]
-    );
-
-    if (bookingCheck.rows.length === 0) {
-      return res.status(404).json({ error: "Booking not found" });
-    }
-
-    const booking = bookingCheck.rows[0];
-
-    if (booking.booking_status === "cancelled") {
-      return res.status(400).json({ error: "Booking is already cancelled" });
-    }
-
-    // Check if cancellation is allowed (e.g., not too close to check-in date)
-    const checkInDate = new Date(booking.check_in_date);
-    const now = new Date();
-    const hoursUntilCheckIn = (checkInDate - now) / (1000 * 60 * 60);
-
-    if (hoursUntilCheckIn < 24) {
-      return res.status(400).json({
-        error: "Cannot cancel booking less than 24 hours before check-in",
-      });
-    }
-
-    // Update booking status
-    const result = await query(
-      `
-      UPDATE bookings 
-      SET booking_status = 'cancelled', updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1
-      RETURNING *
-    `,
-      [id]
-    );
-
-    res.json({
-      message: "Booking cancelled successfully",
-      booking: result.rows[0],
-    });
-  } catch (error) {
-    console.error("Cancel booking error:", error);
-    res.status(500).json({ error: "Failed to cancel booking" });
-  }
-});
-
-// Get booking details
-router.get("/:id", authenticateToken, async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await query(
-      `
-      SELECT 
-        b.*,
-        p.title as property_title,
-        p.address,
-        p.city,
-        p.state,
-        p.country,
-        p.check_in_time,
-        p.check_out_time,
-        host.first_name || ' ' || host.last_name as host_name,
-        host.email as host_email,
-        guest.first_name || ' ' || guest.last_name as guest_name,
-        guest.email as guest_email
-      FROM bookings b
-      JOIN properties p ON b.property_id = p.id
-      JOIN users host ON p.host_id = host.id
-      JOIN users guest ON b.guest_id = guest.id
-      WHERE b.id = $1
-    `,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: "Booking not found" });
-    }
-
-    const booking = result.rows[0];
-
-    // Check if user is either the guest or the host
-    if (booking.guest_id !== req.user.id && booking.host_id !== req.user.id) {
-      return res.status(403).json({ error: "Access denied" });
-    }
-
-    res.json({
-      id: booking.id,
-      propertyTitle: booking.property_title,
-      address: booking.address,
-      location: `${booking.city}, ${booking.state || booking.country}`,
-      checkInDate: booking.check_in_date,
-      checkOutDate: booking.check_out_date,
-      checkInTime: booking.check_in_time,
-      checkOutTime: booking.check_out_time,
-      numGuests: booking.num_guests,
-      totalAmount: Number.parseFloat(booking.total_amount),
-      status: booking.booking_status,
-      paymentStatus: booking.payment_status,
-      specialRequests: booking.special_requests,
-      hostName: booking.host_name,
-      hostEmail: booking.host_email,
-      guestName: booking.guest_name,
-      guestEmail: booking.guest_email,
-      createdAt: booking.created_at,
-    });
-  } catch (error) {
-    console.error("Get booking details error:", error);
-    res.status(500).json({ error: "Failed to fetch booking details" });
-  }
-});
 
 module.exports = router;

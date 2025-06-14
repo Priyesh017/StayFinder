@@ -31,12 +31,15 @@ const loginValidation = [
   body("password").notEmpty().withMessage("Password is required"),
 ];
 
-// Register endpoint
+// Register endpoint - Updated to match frontend
 router.post("/register", registerValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({
+        error: "Validation failed",
+        errors: errors.array(),
+      });
     }
 
     const { email, password, firstName, lastName, userType, phone } = req.body;
@@ -59,7 +62,7 @@ router.post("/register", registerValidation, async (req, res) => {
     const result = await query(
       `INSERT INTO users (email, password_hash, first_name, last_name, user_type, phone) 
        VALUES ($1, $2, $3, $4, $5, $6) 
-       RETURNING id, email, first_name, last_name, user_type, created_at`,
+       RETURNING id, email, first_name, last_name, user_type, is_verified, created_at`,
       [email, passwordHash, firstName, lastName, userType, phone]
     );
 
@@ -67,7 +70,11 @@ router.post("/register", registerValidation, async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      {
+        userId: user.id,
+        email: user.email,
+        userType: user.user_type,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -81,6 +88,7 @@ router.post("/register", registerValidation, async (req, res) => {
         firstName: user.first_name,
         lastName: user.last_name,
         userType: user.user_type,
+        isVerified: user.is_verified,
       },
     });
   } catch (error) {
@@ -89,12 +97,15 @@ router.post("/register", registerValidation, async (req, res) => {
   }
 });
 
-// Login endpoint
+// Login endpoint - Updated to match frontend
 router.post("/login", loginValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({
+        error: "Validation failed",
+        errors: errors.array(),
+      });
     }
 
     const { email, password } = req.body;
@@ -119,7 +130,11 @@ router.post("/login", loginValidation, async (req, res) => {
 
     // Generate JWT token
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      {
+        userId: user.id,
+        email: user.email,
+        userType: user.user_type,
+      },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -142,7 +157,7 @@ router.post("/login", loginValidation, async (req, res) => {
   }
 });
 
-// Verify token endpoint
+// Verify token endpoint - Updated to match frontend
 router.get("/verify", authenticateToken, (req, res) => {
   res.json({
     user: {

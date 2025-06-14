@@ -28,6 +28,13 @@
     ]
   },
   "dependencies": {
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "^13.3.0",
+    "@testing-library/user-event": "^13.5.0",
+    "@types/jest": "^27.5.2",
+    "@types/node": "^16.11.56",
+    "@types/react": "^18.0.17",
+    "@types/react-dom": "^18.0.6",
     "axios": "^1.9.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.515.0",

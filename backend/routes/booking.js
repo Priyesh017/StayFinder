@@ -134,7 +134,16 @@ router.post(
 
       res.status(201).json({
         message: "Booking created successfully",
-        booking: bookingResult.rows[0],
+        booking: {
+          id: bookingResult.rows[0].id,
+          propertyId: bookingResult.rows[0].property_id,
+          checkInDate: bookingResult.rows[0].check_in_date,
+          checkOutDate: bookingResult.rows[0].check_out_date,
+          numGuests: bookingResult.rows[0].num_guests,
+          totalAmount: Number.parseFloat(bookingResult.rows[0].total_amount),
+          status: bookingResult.rows[0].booking_status,
+          paymentStatus: bookingResult.rows[0].payment_status,
+        },
       });
     } catch (error) {
       await client.query("ROLLBACK");
@@ -146,7 +155,7 @@ router.post(
   }
 );
 
-// Get user's bookings (guest)
+// Get user's bookings (guest) - Updated for frontend
 router.get("/user", authenticateToken, async (req, res) => {
   try {
     const result = await query(
@@ -157,11 +166,14 @@ router.get("/user", authenticateToken, async (req, res) => {
         p.city,
         p.state,
         p.country,
-        u.first_name || ' ' || u.last_name as host_name
+        u.first_name || ' ' || u.last_name as host_name,
+        array_agg(DISTINCT pi.image_url ORDER BY pi.display_order) FILTER (WHERE pi.image_url IS NOT NULL) as images
       FROM bookings b
       JOIN properties p ON b.property_id = p.id
       JOIN users u ON p.host_id = u.id
+      LEFT JOIN property_images pi ON p.id = pi.property_id
       WHERE b.guest_id = $1
+      GROUP BY b.id, p.title, p.city, p.state, p.country, u.first_name, u.last_name
       ORDER BY b.created_at DESC
     `,
       [req.user.id]
@@ -180,6 +192,7 @@ router.get("/user", authenticateToken, async (req, res) => {
       paymentStatus: row.payment_status,
       specialRequests: row.special_requests,
       createdAt: row.created_at,
+      images: row.images || ["/placeholder.svg?height=300&width=400"],
     }));
 
     res.json(bookings);
@@ -189,7 +202,7 @@ router.get("/user", authenticateToken, async (req, res) => {
   }
 });
 
-// Get host's bookings
+// Get host's bookings - Updated for dashboard
 router.get("/host", authenticateToken, async (req, res) => {
   try {
     const result = await query(
@@ -204,23 +217,30 @@ router.get("/host", authenticateToken, async (req, res) => {
       JOIN users u ON b.guest_id = u.id
       WHERE p.host_id = $1
       ORDER BY b.created_at DESC
+      LIMIT 10
     `,
       [req.user.id]
     );
 
     const bookings = result.rows.map((row) => ({
-      id: row.id,
-      propertyTitle: row.property_title,
-      guestName: row.guest_name,
-      guestEmail: row.guest_email,
-      checkInDate: row.check_in_date,
-      checkOutDate: row.check_out_date,
-      numGuests: row.num_guests,
-      totalAmount: Number.parseFloat(row.total_amount),
+      id: row.id.toString(),
+      guest: {
+        name: row.guest_name,
+        avatar: "/placeholder.svg?height=40&width=40",
+      },
+      property: row.property_title,
+      checkIn: new Date(row.check_in_date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      checkOut: new Date(row.check_out_date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
       status: row.booking_status,
-      paymentStatus: row.payment_status,
-      specialRequests: row.special_requests,
-      createdAt: row.created_at,
+      amount: `$${Number.parseFloat(row.total_amount).toFixed(0)}`,
     }));
 
     res.json(bookings);
