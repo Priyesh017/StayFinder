@@ -1,29 +1,36 @@
-import { Routes, Route } from "react-router-dom";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import ListingDetails from "./pages/ListingDetails";
-import AddListing from "./pages/AddListing";
-import ProtectedRoute from "./components/ProtectedRoute";
-import Layout from "./components/Layout";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./contexts/AuthContext";
+import { Navbar } from "./components/Navbar";
+import { Footer } from "./components/Footer";
+import HomePage from "./pages/HomePage";
+import PropertyDetailPage from "./pages/PropertyDetailPage";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import HostDashboard from "./pages/HostDashboard";
+import SearchPage from "./pages/SearchPage";
+import "./App.css";
 
-export default function App() {
+function App() {
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/listings/:id" element={<ListingDetails />} />
-        <Route
-          path="/add-listing"
-          element={
-            <ProtectedRoute>
-              <AddListing />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-    </Layout>
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen flex flex-col">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/property/:id" element={<PropertyDetailPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/host/dashboard" element={<HostDashboard />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
+
+export default App;
