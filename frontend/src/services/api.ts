@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  import.meta.env.REACT_APP_API_URL || "http://localhost:5000/api";
 
 class ApiService {
   private async request(endpoint: string, options: RequestInit = {}) {
