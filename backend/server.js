@@ -7,9 +7,9 @@ require("dotenv").config();
 
 const authRoutes = require("./routes/auth");
 const propertyRoutes = require("./routes/properties");
-const bookingRoutes = require("./routes/bookings");
+const bookingRoutes = require("./routes/booking");
 const reviewRoutes = require("./routes/reviews");
-const userRoutes = require("./routes/users");
+const userRoutes = require("./routes/user");
 const dashboardRoutes = require("./routes/dashboard");
 
 const app = express();
@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 5000;
 app.use(helmet());
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL,
     credentials: true,
   })
 );
@@ -90,9 +90,7 @@ process.on("SIGINT", () => {
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(
-    `📱 Frontend URL: ${process.env.FRONTEND_URL || "http://localhost:3000"}`
-  );
+  console.log(`📱 Frontend URL: ${process.env.FRONTEND_URL}`);
   console.log(
     `🗄️  Database: ${process.env.DATABASE_URL ? "Connected" : "Not configured"}`
   );
