@@ -1,7 +1,7 @@
 // StayFinder API Examples
 // This demonstrates the backend API endpoints that would be implemented
 
-const API_BASE_URL = "http://localhost:3000/api";
+const API_BASE_URL = "http://localhost:5000/api";
 
 // Authentication endpoints
 async function registerUser(userData) {

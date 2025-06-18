@@ -126,4 +126,4 @@ CREATE INDEX idx_properties_host_id ON properties(host_id);
 CREATE INDEX idx_properties_price ON properties(price_per_night);
 CREATE INDEX idx_properties_active ON properties(is_active);
 CREATE INDEX idx_bookings_property_id ON bookings(property_id);
-CREATE INDEX
+
