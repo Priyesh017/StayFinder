@@ -1,40 +1,44 @@
-import express from "express"
-import bcrypt from "bcryptjs"
-import jwt from "jsonwebtoken"
-import prisma from "../config/database"
-import { authenticateAdmin } from "../middleware/auth"
-import type { AuthRequest } from "../types"
+import express from "express";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import prisma from "../config/database";
+import { authenticateAdmin } from "../middleware/auth";
+import type { AuthRequest } from "../types";
 
-const router = express.Router()
+const router = express.Router();
 
 // Admin login
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
     const admin = await prisma.admin.findUnique({
       where: { email },
-    })
+    });
 
     if (!admin) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         message: "Invalid credentials",
-      })
+      });
+      return;
     }
 
-    const isPasswordValid = await bcrypt.compare(password, admin.password)
+    const isPasswordValid = await bcrypt.compare(password, admin.password);
 
     if (!isPasswordValid) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         message: "Invalid credentials",
-      })
+      });
+      return;
     }
 
-    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET!, { expiresIn: process.env.JWT_EXPIRES_IN })
+    const token = jwt.sign({ adminId: admin.id }, process.env.JWT_SECRET!, {
+      expiresIn: 1000 * 60 * 60,
+    });
 
-    const { password: _, ...adminWithoutPassword } = admin
+    const { password: _, ...adminWithoutPassword } = admin;
 
     res.json({
       success: true,
@@ -43,21 +47,28 @@ router.post("/login", async (req, res) => {
         admin: adminWithoutPassword,
         token,
       },
-    })
+    });
   } catch (error) {
-    console.error("Admin login error:", error)
+    console.error("Admin login error:", error);
     res.status(500).json({
       success: false,
       message: "Login failed",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Get dashboard stats
 router.get("/dashboard", authenticateAdmin, async (req: AuthRequest, res) => {
   try {
-    const [totalUsers, totalListings, totalBookings, totalRevenue, recentBookings, topListings] = await Promise.all([
+    const [
+      totalUsers,
+      totalListings,
+      totalBookings,
+      totalRevenue,
+      recentBookings,
+      topListings,
+    ] = await Promise.all([
       prisma.user.count(),
       prisma.listing.count(),
       prisma.booking.count(),
@@ -89,7 +100,7 @@ router.get("/dashboard", authenticateAdmin, async (req: AuthRequest, res) => {
           price: true,
         },
       }),
-    ])
+    ]);
 
     res.json({
       success: true,
@@ -103,23 +114,23 @@ router.get("/dashboard", authenticateAdmin, async (req: AuthRequest, res) => {
         recentBookings,
         topListings,
       },
-    })
+    });
   } catch (error) {
-    console.error("Dashboard error:", error)
+    console.error("Dashboard error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get dashboard data",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Get all users
 router.get("/users", authenticateAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = Number.parseInt(req.query.page as string) || 1
-    const limit = Number.parseInt(req.query.limit as string) || 10
-    const skip = (page - 1) * limit
+    const page = Number.parseInt(req.query.page as string) || 1;
+    const limit = Number.parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -144,7 +155,7 @@ router.get("/users", authenticateAdmin, async (req: AuthRequest, res) => {
         },
       }),
       prisma.user.count(),
-    ])
+    ]);
 
     res.json({
       success: true,
@@ -155,23 +166,23 @@ router.get("/users", authenticateAdmin, async (req: AuthRequest, res) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    })
+    });
   } catch (error) {
-    console.error("Get users error:", error)
+    console.error("Get users error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get users",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Get all listings
 router.get("/listings", authenticateAdmin, async (req: AuthRequest, res) => {
   try {
-    const page = Number.parseInt(req.query.page as string) || 1
-    const limit = Number.parseInt(req.query.limit as string) || 10
-    const skip = (page - 1) * limit
+    const page = Number.parseInt(req.query.page as string) || 1;
+    const limit = Number.parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
 
     const [listings, total] = await Promise.all([
       prisma.listing.findMany({
@@ -195,7 +206,7 @@ router.get("/listings", authenticateAdmin, async (req: AuthRequest, res) => {
         },
       }),
       prisma.listing.count(),
-    ])
+    ]);
 
     res.json({
       success: true,
@@ -206,50 +217,54 @@ router.get("/listings", authenticateAdmin, async (req: AuthRequest, res) => {
         total,
         totalPages: Math.ceil(total / limit),
       },
-    })
+    });
   } catch (error) {
-    console.error("Get listings error:", error)
+    console.error("Get listings error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get listings",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Update listing status
-router.patch("/listings/:id/status", authenticateAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    const { status } = req.body
+router.patch(
+  "/listings/:id/status",
+  authenticateAdmin,
+  async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
 
-    const listing = await prisma.listing.update({
-      where: { id },
-      data: { status },
-      include: {
-        host: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
+      const listing = await prisma.listing.update({
+        where: { id },
+        data: { status },
+        include: {
+          host: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
         },
-      },
-    })
+      });
 
-    res.json({
-      success: true,
-      message: "Listing status updated successfully",
-      data: listing,
-    })
-  } catch (error) {
-    console.error("Update listing status error:", error)
-    res.status(500).json({
-      success: false,
-      message: "Failed to update listing status",
-      error: "Internal server error",
-    })
+      res.json({
+        success: true,
+        message: "Listing status updated successfully",
+        data: listing,
+      });
+    } catch (error) {
+      console.error("Update listing status error:", error);
+      res.status(500).json({
+        success: false,
+        message: "Failed to update listing status",
+        error: "Internal server error",
+      });
+    }
   }
-})
+);
 
-export default router
+export default router;

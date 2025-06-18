@@ -1,21 +1,22 @@
-import type { Request, Response, NextFunction } from "express"
-import Joi from "joi"
+import type { Request, Response, NextFunction } from "express";
+import Joi from "joi";
 
 export const validate = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const { error } = schema.validate(req.body)
+    const { error } = schema.validate(req.body);
 
     if (error) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "Validation error",
-        error: error.details[0].message,
-      })
+        error: error.details?.[0]?.message || "Unknown validation error",
+      });
+      return;
     }
 
-    next()
-  }
-}
+    next();
+  };
+};
 
 // User validation schemas
 export const registerSchema = Joi.object({
@@ -25,12 +26,12 @@ export const registerSchema = Joi.object({
   lastName: Joi.string().min(2).max(50).required(),
   phone: Joi.string().optional(),
   isHost: Joi.boolean().optional(),
-})
+});
 
 export const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
-})
+});
 
 // Listing validation schemas
 export const createListingSchema = Joi.object({
@@ -47,7 +48,7 @@ export const createListingSchema = Joi.object({
   category: Joi.string().required(),
   latitude: Joi.number().optional(),
   longitude: Joi.number().optional(),
-})
+});
 
 // Booking validation schemas
 export const createBookingSchema = Joi.object({
@@ -55,11 +56,11 @@ export const createBookingSchema = Joi.object({
   checkIn: Joi.date().iso().required(),
   checkOut: Joi.date().iso().greater(Joi.ref("checkIn")).required(),
   guests: Joi.number().integer().min(1).required(),
-})
+});
 
 // Review validation schemas
 export const createReviewSchema = Joi.object({
   listingId: Joi.string().uuid().required(),
   rating: Joi.number().integer().min(1).max(5).required(),
   comment: Joi.string().max(500).optional(),
-})
+});
