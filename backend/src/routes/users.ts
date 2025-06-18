@@ -1,9 +1,9 @@
-import express from "express"
-import prisma from "../config/database"
-import { authenticateUser } from "../middleware/auth"
-import type { AuthRequest } from "../types"
+import express from "express";
+import prisma from "../config/database";
+import { authenticateUser } from "../middleware/auth";
+import type { AuthRequest } from "../types";
 
-const router = express.Router()
+const router = express.Router();
 
 // Get user profile
 router.get("/profile", authenticateUser, async (req: AuthRequest, res) => {
@@ -29,26 +29,26 @@ router.get("/profile", authenticateUser, async (req: AuthRequest, res) => {
           },
         },
       },
-    })
+    });
 
     res.json({
       success: true,
       data: user,
-    })
+    });
   } catch (error) {
-    console.error("Get profile error:", error)
+    console.error("Get profile error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get profile",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Update user profile
 router.put("/profile", authenticateUser, async (req: AuthRequest, res) => {
   try {
-    const { firstName, lastName, phone, avatar } = req.body
+    const { firstName, lastName, phone, avatar } = req.body;
 
     const updatedUser = await prisma.user.update({
       where: { id: req.user!.id },
@@ -69,31 +69,32 @@ router.put("/profile", authenticateUser, async (req: AuthRequest, res) => {
         isVerified: true,
         joinDate: true,
       },
-    })
+    });
 
     res.json({
       success: true,
       message: "Profile updated successfully",
       data: updatedUser,
-    })
+    });
   } catch (error) {
-    console.error("Update profile error:", error)
+    console.error("Update profile error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to update profile",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Become a host
 router.post("/become-host", authenticateUser, async (req: AuthRequest, res) => {
   try {
     if (req.user!.isHost) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         message: "You are already a host",
-      })
+      });
+      return;
     }
 
     const updatedUser = await prisma.user.update({
@@ -106,27 +107,33 @@ router.post("/become-host", authenticateUser, async (req: AuthRequest, res) => {
         lastName: true,
         isHost: true,
       },
-    })
+    });
 
     res.json({
       success: true,
       message: "Congratulations! You are now a host.",
       data: updatedUser,
-    })
+    });
   } catch (error) {
-    console.error("Become host error:", error)
+    console.error("Become host error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to become a host",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
 // Get user's dashboard stats
 router.get("/dashboard", authenticateUser, async (req: AuthRequest, res) => {
   try {
-    const [bookingsCount, favoritesCount, reviewsCount, upcomingBookings, recentBookings] = await Promise.all([
+    const [
+      bookingsCount,
+      favoritesCount,
+      reviewsCount,
+      upcomingBookings,
+      recentBookings,
+    ] = await Promise.all([
       prisma.booking.count({
         where: { userId: req.user!.id },
       }),
@@ -168,7 +175,7 @@ router.get("/dashboard", authenticateUser, async (req: AuthRequest, res) => {
           },
         },
       }),
-    ])
+    ]);
 
     res.json({
       success: true,
@@ -181,15 +188,15 @@ router.get("/dashboard", authenticateUser, async (req: AuthRequest, res) => {
         upcomingBookings,
         recentBookings,
       },
-    })
+    });
   } catch (error) {
-    console.error("Get dashboard error:", error)
+    console.error("Get dashboard error:", error);
     res.status(500).json({
       success: false,
       message: "Failed to get dashboard data",
       error: "Internal server error",
-    })
+    });
   }
-})
+});
 
-export default router
+export default router;
