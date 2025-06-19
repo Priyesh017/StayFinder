@@ -1,91 +1,103 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Eye, EyeOff, Mail, Lock, User, Phone, Home } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import Header from "@/components/header"
-import { useHost } from "@/contexts/host-context"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Home } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Header from "@/components/welcomePage/header";
+import { useHostRegister, useHostLogin } from "@/hooks/host/useHostAuth";
 
 export default function HostAuthPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [loginData, setLoginData] = useState({ email: "", password: "" })
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
     phone: "",
-  })
-  const { login, register, isLoading } = useHost()
-  const { toast } = useToast()
-  const router = useRouter()
+  });
+  const hostRegister = useHostRegister();
+  const hostLogin = useHostLogin();
+  const { toast } = useToast();
+  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!loginData.email || !loginData.password) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: "Missing Fields",
+        description: "Please fill in both email and password.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const success = await login(loginData.email, loginData.password)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Welcome to your Host Dashboard!",
-      })
-      router.push("/host")
-    } else {
-      toast({
-        title: "Error",
-        description: "Invalid credentials",
-        variant: "destructive",
-      })
-    }
-  }
+    hostLogin.mutate(loginData, {
+      onError: () => {
+        toast({
+          title: "Login Failed",
+          description: "Invalid credentials",
+          variant: "destructive",
+        });
+      },
+      onSuccess: () => {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to StayFinder!",
+        });
+      },
+    });
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!registerData.firstName || !registerData.lastName || !registerData.email || !registerData.password) {
+    const { firstName, lastName, email, password } = registerData;
+
+    if (!firstName || !lastName || !email || !password) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const success = await register(registerData)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Host account created successfully!",
-      })
-      router.push("/host")
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to create host account",
-        variant: "destructive",
-      })
-    }
-  }
+    hostRegister.mutate(registerData, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Account created successfully!",
+        });
+        router.push("/dashboard");
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to create account",
+          variant: "destructive",
+        });
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50">
@@ -93,14 +105,22 @@ export default function HostAuthPage() {
 
       <div className="pt-20 pb-12 px-4">
         <div className="max-w-md mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             <Card className="shadow-2xl border-0">
               <CardHeader className="text-center pb-2">
                 <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <Home className="text-white h-6 w-6" />
                 </div>
-                <CardTitle className="text-2xl font-bold">Host Portal</CardTitle>
-                <CardDescription>Start your hosting journey with StayFinder</CardDescription>
+                <CardTitle className="text-2xl font-bold">
+                  Host Portal
+                </CardTitle>
+                <CardDescription>
+                  Start your hosting journey with StayFinder
+                </CardDescription>
               </CardHeader>
 
               <CardContent>
@@ -128,7 +148,12 @@ export default function HostAuthPage() {
                             placeholder="Enter your email"
                             className="pl-10"
                             value={loginData.email}
-                            onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -144,7 +169,12 @@ export default function HostAuthPage() {
                             placeholder="Enter your password"
                             className="pl-10 pr-10"
                             value={loginData.password}
-                            onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                           />
                           <Button
@@ -164,13 +194,20 @@ export default function HostAuthPage() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <Link href="#" className="text-sm text-emerald-600 hover:text-emerald-700">
+                        <Link
+                          href="#"
+                          className="text-sm text-emerald-600 hover:text-emerald-700"
+                        >
                           Forgot password?
                         </Link>
                       </div>
 
-                      <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
-                        {isLoading ? "Signing in..." : "Sign In"}
+                      <Button
+                        type="submit"
+                        className="w-full bg-emerald-500 hover:bg-emerald-600"
+                        disabled={hostLogin.isPending}
+                      >
+                        {hostLogin.isPending ? "Signing in..." : "Sign In"}
                       </Button>
                     </motion.form>
                   </TabsContent>
@@ -193,7 +230,12 @@ export default function HostAuthPage() {
                               placeholder="First name"
                               className="pl-10"
                               value={registerData.firstName}
-                              onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
+                              onChange={(e) =>
+                                setRegisterData({
+                                  ...registerData,
+                                  firstName: e.target.value,
+                                })
+                              }
                               required
                             />
                           </div>
@@ -204,7 +246,12 @@ export default function HostAuthPage() {
                             id="lastName"
                             placeholder="Last name"
                             value={registerData.lastName}
-                            onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                lastName: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -220,7 +267,12 @@ export default function HostAuthPage() {
                             placeholder="Enter your email"
                             className="pl-10"
                             value={registerData.email}
-                            onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -236,7 +288,12 @@ export default function HostAuthPage() {
                             placeholder="Enter your phone number"
                             className="pl-10"
                             value={registerData.phone}
-                            onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                phone: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -252,7 +309,12 @@ export default function HostAuthPage() {
                             placeholder="Create a password"
                             className="pl-10 pr-10"
                             value={registerData.password}
-                            onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                           />
                           <Button
@@ -271,8 +333,14 @@ export default function HostAuthPage() {
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={isLoading}>
-                        {isLoading ? "Creating account..." : "Start Hosting"}
+                      <Button
+                        type="submit"
+                        className="w-full bg-emerald-500 hover:bg-emerald-600"
+                        disabled={hostRegister.isPending}
+                      >
+                        {hostRegister.isPending
+                          ? "Creating account..."
+                          : "Start Hosting"}
                       </Button>
                     </motion.form>
                   </TabsContent>
@@ -284,7 +352,9 @@ export default function HostAuthPage() {
                       <Separator />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                      <span className="bg-white px-2 text-gray-500">
+                        Or continue with
+                      </span>
                     </div>
                   </div>
 
@@ -311,7 +381,11 @@ export default function HostAuthPage() {
                       Google
                     </Button>
                     <Button variant="outline" className="w-full">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                       </svg>
                       Facebook
@@ -320,7 +394,9 @@ export default function HostAuthPage() {
                 </div>
 
                 <div className="mt-6 text-center">
-                  <p className="text-sm text-gray-600">Demo credentials: Any email/password combination</p>
+                  <p className="text-sm text-gray-600">
+                    Demo credentials: Any email/password combination
+                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -328,5 +404,5 @@ export default function HostAuthPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

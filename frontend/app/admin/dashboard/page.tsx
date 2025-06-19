@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Users,
   Home,
@@ -14,14 +14,32 @@ import {
   Search,
   Filter,
   MoreHorizontal,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -30,28 +48,44 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
-import Image from "next/image"
-import { useAdmin } from "@/contexts/admin-context"
-import { useProperties, type Property } from "@/contexts/properties-context"
-import { useBooking } from "@/contexts/booking-context"
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { useCurrentUser } from "@/hooks/auth/useAuth";
+import {
+  useProperties,
+  useCreateProperty,
+  useUpdateProperty,
+  useDeleteProperty,
+} from "@/hooks/properties/useProperties";
+import { useHostBookings } from "@/hooks/booking/useBooking";
+import { Property } from "@/types/property";
+import { Booking } from "@/types/booking";
 
 export default function AdminDashboard() {
-  const { admin } = useAdmin()
-  const { properties, addProperty, updateProperty, deleteProperty } = useProperties()
-  const { bookings } = useBooking()
-  const { toast } = useToast()
-  const router = useRouter()
+  const admin = useCurrentUser();
+  const properties = useProperties();
+  const addProperty = useCreateProperty();
+  const updateProperty = useUpdateProperty();
+  const deleteProperty = useDeleteProperty();
+  const bookings = useHostBookings();
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const [searchQuery, setSearchQuery] = useState("")
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
-  const [editingProperty, setEditingProperty] = useState<Property | null>(null)
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProperty, setEditingProperty] = useState<Property | null>(null);
   const [newProperty, setNewProperty] = useState({
     title: "",
     description: "",
@@ -65,27 +99,32 @@ export default function AdminDashboard() {
     amenities: [] as string[],
     highlights: [] as string[],
     status: "active" as const,
-  })
+  });
 
   useEffect(() => {
     if (!admin) {
-      router.push("/admin/login")
+      router.push("/admin/login");
     }
-  }, [admin, router])
+  }, [admin, router]);
 
   if (!admin) {
-    return null
+    return null;
   }
 
-  const filteredProperties = properties.filter(
-    (property) =>
+  const filteredProperties = (properties.data?.data ?? []).filter(
+    (property: Property) =>
       property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      property.location.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+      property.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  const totalRevenue = bookings.reduce((sum, booking) => sum + booking.totalPrice, 0)
-  const totalUsers = 150 // Mock data
-  const activeProperties = properties.filter((p) => p.status === "active").length
+  const totalRevenue = (bookings.data?.data ?? []).reduce(
+    (sum: number, booking: Booking) => sum + booking.totalPrice,
+    0
+  );
+  const totalUsers = 150; // Mock data
+  const activeProperties = (properties.data?.data ?? []).filter(
+    (p: Property) => p.status === "active"
+  ).length;
 
   const handleAddProperty = () => {
     if (!newProperty.title || !newProperty.location || !newProperty.price) {
@@ -93,14 +132,15 @@ export default function AdminDashboard() {
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     const propertyData = {
       ...newProperty,
       images: ["/placeholder.svg?height=300&width=400"],
       host: {
+        id: "admin-host-id",
         name: "Admin Host",
         avatar: "/placeholder-user.jpg",
         joinDate: "2024",
@@ -110,12 +150,18 @@ export default function AdminDashboard() {
       },
       rating: 4.5,
       reviews: 0,
-      amenities: newProperty.amenities.length > 0 ? newProperty.amenities : ["WiFi", "Kitchen"],
-      highlights: newProperty.highlights.length > 0 ? newProperty.highlights : ["Great location", "Clean space"],
-    }
+      amenities:
+        newProperty.amenities.length > 0
+          ? newProperty.amenities
+          : ["WiFi", "Kitchen"],
+      highlights:
+        newProperty.highlights.length > 0
+          ? newProperty.highlights
+          : ["Great location", "Clean space"],
+    };
 
-    addProperty(propertyData)
-    setIsAddDialogOpen(false)
+    addProperty.mutate(propertyData);
+    setIsAddDialogOpen(false);
     setNewProperty({
       title: "",
       description: "",
@@ -129,32 +175,32 @@ export default function AdminDashboard() {
       amenities: [],
       highlights: [],
       status: "active",
-    })
+    });
     toast({
       title: "Success",
       description: "Property added successfully",
-    })
-  }
+    });
+  };
 
   const handleEditProperty = () => {
-    if (!editingProperty) return
+    if (!editingProperty) return;
 
-    updateProperty(editingProperty.id, editingProperty)
-    setIsEditDialogOpen(false)
-    setEditingProperty(null)
+    updateProperty.mutate({ id: editingProperty.id, data: editingProperty });
+    setIsEditDialogOpen(false);
+    setEditingProperty(null);
     toast({
       title: "Success",
       description: "Property updated successfully",
-    })
-  }
+    });
+  };
 
   const handleDeleteProperty = (id: string) => {
-    deleteProperty(id)
+    deleteProperty.mutate(id);
     toast({
       title: "Success",
       description: "Property deleted successfully",
-    })
-  }
+    });
+  };
 
   const handleAmenityToggle = (amenity: string, isNew = false) => {
     if (isNew) {
@@ -163,7 +209,7 @@ export default function AdminDashboard() {
         amenities: prev.amenities.includes(amenity)
           ? prev.amenities.filter((a) => a !== amenity)
           : [...prev.amenities, amenity],
-      }))
+      }));
     } else if (editingProperty) {
       setEditingProperty((prev) =>
         prev
@@ -173,10 +219,10 @@ export default function AdminDashboard() {
                 ? prev.amenities.filter((a) => a !== amenity)
                 : [...prev.amenities, amenity],
             }
-          : null,
-      )
+          : null
+      );
     }
-  }
+  };
 
   const availableAmenities = [
     "WiFi",
@@ -191,7 +237,7 @@ export default function AdminDashboard() {
     "Garden",
     "Ocean view",
     "Ski access",
-  ]
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -200,13 +246,17 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-              <p className="text-gray-600 mt-1">Welcome back, {admin.name}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                Admin Dashboard
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Welcome back, {admin.data?.firstName}
+              </p>
             </div>
             <Button
               onClick={() => {
-                localStorage.removeItem("stayfinder_admin")
-                router.push("/admin/login")
+                localStorage.removeItem("stayfinder_admin");
+                router.push("/admin/login");
               }}
               variant="outline"
             >
@@ -235,45 +285,65 @@ export default function AdminDashboard() {
             >
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Revenue
+                  </CardTitle>
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
-                  <p className="text-xs text-muted-foreground">+12% from last month</p>
+                  <div className="text-2xl font-bold">
+                    ${totalRevenue.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    +12% from last month
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Users
+                  </CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{totalUsers}</div>
-                  <p className="text-xs text-muted-foreground">+8% from last month</p>
+                  <p className="text-xs text-muted-foreground">
+                    +8% from last month
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Properties</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Active Properties
+                  </CardTitle>
                   <Home className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">{activeProperties}</div>
-                  <p className="text-xs text-muted-foreground">Out of {properties.length} total</p>
+                  <p className="text-xs text-muted-foreground">
+                    Out of {(properties.data?.data ?? []).length} total
+                  </p>
                 </CardContent>
               </Card>
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+                  <CardTitle className="text-sm font-medium">
+                    Total Bookings
+                  </CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{bookings.length}</div>
-                  <p className="text-xs text-muted-foreground">+15% from last month</p>
+                  <div className="text-2xl font-bold">
+                    {(bookings.data?.data ?? []).length}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    +15% from last month
+                  </p>
                 </CardContent>
               </Card>
             </motion.div>
@@ -291,35 +361,54 @@ export default function AdminDashboard() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {bookings.slice(0, 5).map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
-                      >
-                        <div className="flex items-center gap-4 min-w-0 flex-1">
-                          <Image
-                            src={booking.propertyImage || "/placeholder.svg"}
-                            alt={booking.propertyTitle}
-                            width={60}
-                            height={45}
-                            className="rounded-lg object-cover flex-shrink-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <h4 className="font-semibold truncate">{booking.propertyTitle}</h4>
-                            <p className="text-sm text-gray-600">Host: {booking.hostName}</p>
-                            <p className="text-xs text-gray-500">
-                              {booking.checkIn} - {booking.checkOut}
-                            </p>
+                    {(bookings.data?.data ?? [])
+                      .slice(0, 5)
+                      .map((booking: Booking) => (
+                        <div
+                          key={booking.id}
+                          className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
+                        >
+                          <div className="flex items-center gap-4 min-w-0 flex-1">
+                            <Image
+                              src={
+                                booking.listing.images[0] || "/placeholder.svg"
+                              }
+                              alt={booking.listing.title}
+                              width={60}
+                              height={45}
+                              className="rounded-lg object-cover flex-shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <h4 className="font-semibold truncate">
+                                {booking.listing.title}
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                Host:{" "}
+                                {booking.listing.host.firstName +
+                                  " " +
+                                  booking.listing.host.lastName}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {booking.checkIn} - {booking.checkOut}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <Badge
+                              variant={
+                                booking.status === "CONFIRMED"
+                                  ? "default"
+                                  : "secondary"
+                              }
+                            >
+                              {booking.status}
+                            </Badge>
+                            <span className="font-semibold">
+                              ${booking.totalPrice}
+                            </span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                          <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
-                            {booking.status}
-                          </Badge>
-                          <span className="font-semibold">${booking.totalPrice}</span>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 </CardContent>
               </Card>
@@ -328,15 +417,24 @@ export default function AdminDashboard() {
 
           <TabsContent value="properties" className="space-y-6">
             {/* Properties Management */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
                       <CardTitle>Properties Management</CardTitle>
-                      <CardDescription>Manage all property listings</CardDescription>
+                      <CardDescription>
+                        Manage all property listings
+                      </CardDescription>
                     </div>
-                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <Dialog
+                      open={isAddDialogOpen}
+                      onOpenChange={setIsAddDialogOpen}
+                    >
                       <DialogTrigger asChild>
                         <Button className="flex items-center gap-2">
                           <Plus className="h-4 w-4" />
@@ -346,7 +444,9 @@ export default function AdminDashboard() {
                       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>Add New Property</DialogTitle>
-                          <DialogDescription>Create a new property listing</DialogDescription>
+                          <DialogDescription>
+                            Create a new property listing
+                          </DialogDescription>
                         </DialogHeader>
                         <div className="grid gap-4 py-4">
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -355,7 +455,12 @@ export default function AdminDashboard() {
                               <Input
                                 id="title"
                                 value={newProperty.title}
-                                onChange={(e) => setNewProperty({ ...newProperty, title: e.target.value })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    title: e.target.value,
+                                  })
+                                }
                                 placeholder="Property title"
                               />
                             </div>
@@ -364,7 +469,12 @@ export default function AdminDashboard() {
                               <Input
                                 id="location"
                                 value={newProperty.location}
-                                onChange={(e) => setNewProperty({ ...newProperty, location: e.target.value })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    location: e.target.value,
+                                  })
+                                }
                                 placeholder="City, State"
                               />
                             </div>
@@ -374,7 +484,12 @@ export default function AdminDashboard() {
                             <Textarea
                               id="description"
                               value={newProperty.description}
-                              onChange={(e) => setNewProperty({ ...newProperty, description: e.target.value })}
+                              onChange={(e) =>
+                                setNewProperty({
+                                  ...newProperty,
+                                  description: e.target.value,
+                                })
+                              }
                               placeholder="Property description"
                               rows={3}
                             />
@@ -386,7 +501,12 @@ export default function AdminDashboard() {
                                 id="price"
                                 type="number"
                                 value={newProperty.price}
-                                onChange={(e) => setNewProperty({ ...newProperty, price: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    price: Number(e.target.value),
+                                  })
+                                }
                                 placeholder="120"
                               />
                             </div>
@@ -396,7 +516,12 @@ export default function AdminDashboard() {
                                 id="guests"
                                 type="number"
                                 value={newProperty.guests}
-                                onChange={(e) => setNewProperty({ ...newProperty, guests: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    guests: Number(e.target.value),
+                                  })
+                                }
                                 placeholder="4"
                               />
                             </div>
@@ -406,7 +531,12 @@ export default function AdminDashboard() {
                                 id="bedrooms"
                                 type="number"
                                 value={newProperty.bedrooms}
-                                onChange={(e) => setNewProperty({ ...newProperty, bedrooms: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    bedrooms: Number(e.target.value),
+                                  })
+                                }
                                 placeholder="2"
                               />
                             </div>
@@ -416,7 +546,12 @@ export default function AdminDashboard() {
                                 id="bathrooms"
                                 type="number"
                                 value={newProperty.bathrooms}
-                                onChange={(e) => setNewProperty({ ...newProperty, bathrooms: Number(e.target.value) })}
+                                onChange={(e) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    bathrooms: Number(e.target.value),
+                                  })
+                                }
                                 placeholder="1"
                               />
                             </div>
@@ -426,17 +561,32 @@ export default function AdminDashboard() {
                               <Label htmlFor="type">Property Type</Label>
                               <Select
                                 value={newProperty.type}
-                                onValueChange={(value) => setNewProperty({ ...newProperty, type: value })}
+                                onValueChange={(value) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    type: value,
+                                  })
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select type" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Entire apartment">Entire apartment</SelectItem>
-                                  <SelectItem value="Entire house">Entire house</SelectItem>
-                                  <SelectItem value="Entire cabin">Entire cabin</SelectItem>
-                                  <SelectItem value="Entire villa">Entire villa</SelectItem>
-                                  <SelectItem value="Private room">Private room</SelectItem>
+                                  <SelectItem value="Entire apartment">
+                                    Entire apartment
+                                  </SelectItem>
+                                  <SelectItem value="Entire house">
+                                    Entire house
+                                  </SelectItem>
+                                  <SelectItem value="Entire cabin">
+                                    Entire cabin
+                                  </SelectItem>
+                                  <SelectItem value="Entire villa">
+                                    Entire villa
+                                  </SelectItem>
+                                  <SelectItem value="Private room">
+                                    Private room
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -444,16 +594,25 @@ export default function AdminDashboard() {
                               <Label htmlFor="category">Category</Label>
                               <Select
                                 value={newProperty.category}
-                                onValueChange={(value) => setNewProperty({ ...newProperty, category: value })}
+                                onValueChange={(value) =>
+                                  setNewProperty({
+                                    ...newProperty,
+                                    category: value,
+                                  })
+                                }
                               >
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select category" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Beachfront">Beachfront</SelectItem>
+                                  <SelectItem value="Beachfront">
+                                    Beachfront
+                                  </SelectItem>
                                   <SelectItem value="Cabins">Cabins</SelectItem>
                                   <SelectItem value="City">City</SelectItem>
-                                  <SelectItem value="Countryside">Countryside</SelectItem>
+                                  <SelectItem value="Countryside">
+                                    Countryside
+                                  </SelectItem>
                                   <SelectItem value="Luxury">Luxury</SelectItem>
                                 </SelectContent>
                               </Select>
@@ -463,11 +622,18 @@ export default function AdminDashboard() {
                             <Label>Amenities</Label>
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                               {availableAmenities.map((amenity) => (
-                                <label key={amenity} className="flex items-center space-x-2 cursor-pointer">
+                                <label
+                                  key={amenity}
+                                  className="flex items-center space-x-2 cursor-pointer"
+                                >
                                   <input
                                     type="checkbox"
-                                    checked={newProperty.amenities.includes(amenity)}
-                                    onChange={() => handleAmenityToggle(amenity, true)}
+                                    checked={newProperty.amenities.includes(
+                                      amenity
+                                    )}
+                                    onChange={() =>
+                                      handleAmenityToggle(amenity, true)
+                                    }
                                     className="rounded"
                                   />
                                   <span className="text-sm">{amenity}</span>
@@ -477,10 +643,15 @@ export default function AdminDashboard() {
                           </div>
                         </div>
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                          <Button
+                            variant="outline"
+                            onClick={() => setIsAddDialogOpen(false)}
+                          >
                             Cancel
                           </Button>
-                          <Button onClick={handleAddProperty}>Add Property</Button>
+                          <Button onClick={handleAddProperty}>
+                            Add Property
+                          </Button>
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
@@ -497,7 +668,11 @@ export default function AdminDashboard() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                       />
                     </div>
-                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                    >
                       <Filter className="h-4 w-4" />
                       Filter
                     </Button>
@@ -509,14 +684,20 @@ export default function AdminDashboard() {
                         <TableRow>
                           <TableHead className="w-[100px]">Image</TableHead>
                           <TableHead>Title</TableHead>
-                          <TableHead className="hidden sm:table-cell">Location</TableHead>
-                          <TableHead className="hidden md:table-cell">Price</TableHead>
-                          <TableHead className="hidden lg:table-cell">Status</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Location
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Price
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell">
+                            Status
+                          </TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredProperties.map((property) => (
+                        {filteredProperties.map((property: Property) => (
                           <TableRow key={property.id}>
                             <TableCell>
                               <Image
@@ -529,22 +710,41 @@ export default function AdminDashboard() {
                             </TableCell>
                             <TableCell>
                               <div>
-                                <div className="font-medium">{property.title}</div>
-                                <div className="text-sm text-gray-500 sm:hidden">{property.location}</div>
-                                <div className="text-sm text-gray-500 md:hidden">${property.price}/night</div>
+                                <div className="font-medium">
+                                  {property.title}
+                                </div>
+                                <div className="text-sm text-gray-500 sm:hidden">
+                                  {property.location}
+                                </div>
+                                <div className="text-sm text-gray-500 md:hidden">
+                                  ${property.price}/night
+                                </div>
                               </div>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">{property.location}</TableCell>
-                            <TableCell className="hidden md:table-cell">${property.price}/night</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {property.location}
+                            </TableCell>
+                            <TableCell className="hidden md:table-cell">
+                              ${property.price}/night
+                            </TableCell>
                             <TableCell className="hidden lg:table-cell">
-                              <Badge variant={property.status === "active" ? "default" : "secondary"}>
+                              <Badge
+                                variant={
+                                  property.status === "active"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
                                 {property.status}
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" className="h-8 w-8 p-0">
+                                  <Button
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                  >
                                     <MoreHorizontal className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -555,15 +755,17 @@ export default function AdminDashboard() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     onClick={() => {
-                                      setEditingProperty(property)
-                                      setIsEditDialogOpen(true)
+                                      setEditingProperty(property);
+                                      setIsEditDialogOpen(true);
                                     }}
                                   >
                                     <Edit className="mr-2 h-4 w-4" />
                                     Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
-                                    onClick={() => handleDeleteProperty(property.id)}
+                                    onClick={() =>
+                                      handleDeleteProperty(property.id)
+                                    }
                                     className="text-red-600"
                                   >
                                     <Trash2 className="mr-2 h-4 w-4" />
@@ -586,7 +788,9 @@ export default function AdminDashboard() {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Edit Property</DialogTitle>
-                  <DialogDescription>Update property information</DialogDescription>
+                  <DialogDescription>
+                    Update property information
+                  </DialogDescription>
                 </DialogHeader>
                 {editingProperty && (
                   <div className="grid gap-4 py-4">
@@ -596,7 +800,12 @@ export default function AdminDashboard() {
                         <Input
                           id="edit-title"
                           value={editingProperty.title}
-                          onChange={(e) => setEditingProperty({ ...editingProperty, title: e.target.value })}
+                          onChange={(e) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              title: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <div>
@@ -604,7 +813,12 @@ export default function AdminDashboard() {
                         <Input
                           id="edit-location"
                           value={editingProperty.location}
-                          onChange={(e) => setEditingProperty({ ...editingProperty, location: e.target.value })}
+                          onChange={(e) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              location: e.target.value,
+                            })
+                          }
                         />
                       </div>
                     </div>
@@ -613,7 +827,12 @@ export default function AdminDashboard() {
                       <Textarea
                         id="edit-description"
                         value={editingProperty.description}
-                        onChange={(e) => setEditingProperty({ ...editingProperty, description: e.target.value })}
+                        onChange={(e) =>
+                          setEditingProperty({
+                            ...editingProperty,
+                            description: e.target.value,
+                          })
+                        }
                         rows={3}
                       />
                     </div>
@@ -624,7 +843,12 @@ export default function AdminDashboard() {
                           id="edit-price"
                           type="number"
                           value={editingProperty.price}
-                          onChange={(e) => setEditingProperty({ ...editingProperty, price: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              price: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
                       <div>
@@ -633,7 +857,12 @@ export default function AdminDashboard() {
                           id="edit-guests"
                           type="number"
                           value={editingProperty.guests}
-                          onChange={(e) => setEditingProperty({ ...editingProperty, guests: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              guests: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
                       <div>
@@ -642,7 +871,12 @@ export default function AdminDashboard() {
                           id="edit-bedrooms"
                           type="number"
                           value={editingProperty.bedrooms}
-                          onChange={(e) => setEditingProperty({ ...editingProperty, bedrooms: Number(e.target.value) })}
+                          onChange={(e) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              bedrooms: Number(e.target.value),
+                            })
+                          }
                         />
                       </div>
                       <div>
@@ -652,7 +886,10 @@ export default function AdminDashboard() {
                           type="number"
                           value={editingProperty.bathrooms}
                           onChange={(e) =>
-                            setEditingProperty({ ...editingProperty, bathrooms: Number(e.target.value) })
+                            setEditingProperty({
+                              ...editingProperty,
+                              bathrooms: Number(e.target.value),
+                            })
                           }
                         />
                       </div>
@@ -662,17 +899,32 @@ export default function AdminDashboard() {
                         <Label htmlFor="edit-type">Property Type</Label>
                         <Select
                           value={editingProperty.type}
-                          onValueChange={(value) => setEditingProperty({ ...editingProperty, type: value })}
+                          onValueChange={(value) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              type: value,
+                            })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Entire apartment">Entire apartment</SelectItem>
-                            <SelectItem value="Entire house">Entire house</SelectItem>
-                            <SelectItem value="Entire cabin">Entire cabin</SelectItem>
-                            <SelectItem value="Entire villa">Entire villa</SelectItem>
-                            <SelectItem value="Private room">Private room</SelectItem>
+                            <SelectItem value="Entire apartment">
+                              Entire apartment
+                            </SelectItem>
+                            <SelectItem value="Entire house">
+                              Entire house
+                            </SelectItem>
+                            <SelectItem value="Entire cabin">
+                              Entire cabin
+                            </SelectItem>
+                            <SelectItem value="Entire villa">
+                              Entire villa
+                            </SelectItem>
+                            <SelectItem value="Private room">
+                              Private room
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -680,8 +932,13 @@ export default function AdminDashboard() {
                         <Label htmlFor="edit-status">Status</Label>
                         <Select
                           value={editingProperty.status}
-                          onValueChange={(value: "active" | "inactive" | "pending") =>
-                            setEditingProperty({ ...editingProperty, status: value })
+                          onValueChange={(
+                            value: "active" | "inactive" | "pending"
+                          ) =>
+                            setEditingProperty({
+                              ...editingProperty,
+                              status: value,
+                            })
                           }
                         >
                           <SelectTrigger>
@@ -699,11 +956,18 @@ export default function AdminDashboard() {
                       <Label>Amenities</Label>
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
                         {availableAmenities.map((amenity) => (
-                          <label key={amenity} className="flex items-center space-x-2 cursor-pointer">
+                          <label
+                            key={amenity}
+                            className="flex items-center space-x-2 cursor-pointer"
+                          >
                             <input
                               type="checkbox"
-                              checked={editingProperty.amenities.includes(amenity)}
-                              onChange={() => handleAmenityToggle(amenity, false)}
+                              checked={editingProperty.amenities.includes(
+                                amenity
+                              )}
+                              onChange={() =>
+                                handleAmenityToggle(amenity, false)
+                              }
                               className="rounded"
                             />
                             <span className="text-sm">{amenity}</span>
@@ -714,7 +978,10 @@ export default function AdminDashboard() {
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditDialogOpen(false)}
+                  >
                     Cancel
                   </Button>
                   <Button onClick={handleEditProperty}>Update Property</Button>
@@ -724,11 +991,17 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="bookings" className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <Card>
                 <CardHeader>
                   <CardTitle>Bookings Management</CardTitle>
-                  <CardDescription>View and manage all bookings</CardDescription>
+                  <CardDescription>
+                    View and manage all bookings
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="overflow-x-auto">
@@ -736,26 +1009,48 @@ export default function AdminDashboard() {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Property</TableHead>
-                          <TableHead className="hidden sm:table-cell">Guest</TableHead>
-                          <TableHead className="hidden md:table-cell">Dates</TableHead>
-                          <TableHead className="hidden lg:table-cell">Amount</TableHead>
+                          <TableHead className="hidden sm:table-cell">
+                            Guest
+                          </TableHead>
+                          <TableHead className="hidden md:table-cell">
+                            Dates
+                          </TableHead>
+                          <TableHead className="hidden lg:table-cell">
+                            Amount
+                          </TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {bookings.map((booking) => (
+                        {(bookings.data?.data ?? []).map((booking: Booking) => (
                           <TableRow key={booking.id}>
                             <TableCell>
-                              <div className="font-medium">{booking.propertyTitle}</div>
-                              <div className="text-sm text-gray-500 sm:hidden">Guest: {booking.hostName}</div>
+                              <div className="font-medium">
+                                {booking.listing.title}
+                              </div>
+                              <div className="text-sm text-gray-500 sm:hidden">
+                                Guest: {booking.guests}
+                              </div>
                             </TableCell>
-                            <TableCell className="hidden sm:table-cell">{booking.hostName}</TableCell>
+                            <TableCell className="hidden sm:table-cell">
+                              {booking.listing.host.firstName +
+                                " " +
+                                booking.listing.host.lastName}
+                            </TableCell>
                             <TableCell className="hidden md:table-cell">
                               {booking.checkIn} - {booking.checkOut}
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell">${booking.totalPrice}</TableCell>
+                            <TableCell className="hidden lg:table-cell">
+                              ${booking.totalPrice}
+                            </TableCell>
                             <TableCell>
-                              <Badge variant={booking.status === "confirmed" ? "default" : "secondary"}>
+                              <Badge
+                                variant={
+                                  booking.status === "CONFIRMED"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                              >
                                 {booking.status}
                               </Badge>
                             </TableCell>
@@ -770,17 +1065,27 @@ export default function AdminDashboard() {
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+            >
               <Card>
                 <CardHeader>
                   <CardTitle>Users Management</CardTitle>
-                  <CardDescription>Manage user accounts and permissions</CardDescription>
+                  <CardDescription>
+                    Manage user accounts and permissions
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8">
                     <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">User Management</h3>
-                    <p className="text-gray-600">User management features coming soon</p>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      User Management
+                    </h3>
+                    <p className="text-gray-600">
+                      User management features coming soon
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -789,5 +1094,5 @@ export default function AdminDashboard() {
         </Tabs>
       </div>
     </div>
-  )
+  );
 }

@@ -1,91 +1,104 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import Header from "@/components/header"
-import { useAuth } from "@/contexts/auth-context"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Mail, Lock, User, Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Header from "@/components/welcomePage/header";
+import { useRegister, useLogin } from "@/hooks/auth/useAuth";
 
 export default function AuthPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [loginData, setLoginData] = useState({ email: "", password: "" })
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
     firstName: "",
     lastName: "",
     email: "",
     password: "",
     phone: "",
-  })
-  const { login, register, isLoading } = useAuth()
-  const { toast } = useToast()
-  const router = useRouter()
+    isHost: false,
+  });
+  const { toast } = useToast();
+  const router = useRouter();
+  const register = useRegister();
+  const login = useLogin();
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     if (!loginData.email || !loginData.password) {
       toast({
-        title: "Error",
-        description: "Please fill in all fields",
+        title: "Missing Fields",
+        description: "Please fill in both email and password.",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const success = await login(loginData.email, loginData.password)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Welcome back to StayFinder!",
-      })
-      router.push("/dashboard")
-    } else {
-      toast({
-        title: "Error",
-        description: "Invalid credentials",
-        variant: "destructive",
-      })
-    }
-  }
+    login.mutate(loginData, {
+      onError: () => {
+        toast({
+          title: "Login Failed",
+          description: "Invalid credentials",
+          variant: "destructive",
+        });
+      },
+      onSuccess: () => {
+        toast({
+          title: "Login Successful",
+          description: "Welcome back to StayFinder!",
+        });
+      },
+    });
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    if (!registerData.firstName || !registerData.lastName || !registerData.email || !registerData.password) {
+    const { firstName, lastName, email, password } = registerData;
+
+    if (!firstName || !lastName || !email || !password) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    const success = await register(registerData)
-    if (success) {
-      toast({
-        title: "Success",
-        description: "Account created successfully!",
-      })
-      router.push("/dashboard")
-    } else {
-      toast({
-        title: "Error",
-        description: "Failed to create account",
-        variant: "destructive",
-      })
-    }
-  }
+    register.mutate(registerData, {
+      onSuccess: () => {
+        toast({
+          title: "Success",
+          description: "Account created successfully!",
+        });
+        router.push("/dashboard");
+      },
+      onError: () => {
+        toast({
+          title: "Error",
+          description: "Failed to create account",
+          variant: "destructive",
+        });
+      },
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-rose-50 to-orange-50">
@@ -93,14 +106,22 @@ export default function AuthPage() {
 
       <div className="pt-20 pb-12 px-4">
         <div className="max-w-md mx-auto">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
             <Card className="shadow-2xl border-0">
               <CardHeader className="text-center pb-2">
                 <div className="w-12 h-12 bg-rose-500 rounded-xl flex items-center justify-center mx-auto mb-4">
                   <span className="text-white font-bold text-xl">S</span>
                 </div>
-                <CardTitle className="text-2xl font-bold">Welcome to StayFinder</CardTitle>
-                <CardDescription>Sign in to your account or create a new one</CardDescription>
+                <CardTitle className="text-2xl font-bold">
+                  Welcome to StayFinder
+                </CardTitle>
+                <CardDescription>
+                  Sign in to your account or create a new one
+                </CardDescription>
               </CardHeader>
 
               <CardContent>
@@ -128,7 +149,12 @@ export default function AuthPage() {
                             placeholder="Enter your email"
                             className="pl-10"
                             value={loginData.email}
-                            onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -144,7 +170,12 @@ export default function AuthPage() {
                             placeholder="Enter your password"
                             className="pl-10 pr-10"
                             value={loginData.password}
-                            onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                            onChange={(e) =>
+                              setLoginData({
+                                ...loginData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                           />
                           <Button
@@ -164,13 +195,20 @@ export default function AuthPage() {
                       </div>
 
                       <div className="flex items-center justify-between">
-                        <Link href="#" className="text-sm text-rose-600 hover:text-rose-700">
+                        <Link
+                          href="#"
+                          className="text-sm text-rose-600 hover:text-rose-700"
+                        >
                           Forgot password?
                         </Link>
                       </div>
 
-                      <Button type="submit" className="w-full bg-rose-500 hover:bg-rose-600" disabled={isLoading}>
-                        {isLoading ? "Signing in..." : "Sign In"}
+                      <Button
+                        type="submit"
+                        className="w-full bg-rose-500 hover:bg-rose-600"
+                        disabled={login.isPending}
+                      >
+                        {login.isPending ? "Signing in..." : "Sign In"}
                       </Button>
                     </motion.form>
                   </TabsContent>
@@ -193,7 +231,12 @@ export default function AuthPage() {
                               placeholder="First name"
                               className="pl-10"
                               value={registerData.firstName}
-                              onChange={(e) => setRegisterData({ ...registerData, firstName: e.target.value })}
+                              onChange={(e) =>
+                                setRegisterData({
+                                  ...registerData,
+                                  firstName: e.target.value,
+                                })
+                              }
                               required
                             />
                           </div>
@@ -204,7 +247,12 @@ export default function AuthPage() {
                             id="lastName"
                             placeholder="Last name"
                             value={registerData.lastName}
-                            onChange={(e) => setRegisterData({ ...registerData, lastName: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                lastName: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -220,7 +268,12 @@ export default function AuthPage() {
                             placeholder="Enter your email"
                             className="pl-10"
                             value={registerData.email}
-                            onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                email: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -236,7 +289,12 @@ export default function AuthPage() {
                             placeholder="Enter your phone number"
                             className="pl-10"
                             value={registerData.phone}
-                            onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                phone: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -252,7 +310,12 @@ export default function AuthPage() {
                             placeholder="Create a password"
                             className="pl-10 pr-10"
                             value={registerData.password}
-                            onChange={(e) => setRegisterData({ ...registerData, password: e.target.value })}
+                            onChange={(e) =>
+                              setRegisterData({
+                                ...registerData,
+                                password: e.target.value,
+                              })
+                            }
                             required
                           />
                           <Button
@@ -271,8 +334,12 @@ export default function AuthPage() {
                         </div>
                       </div>
 
-                      <Button type="submit" className="w-full bg-rose-500 hover:bg-rose-600" disabled={isLoading}>
-                        {isLoading ? "Creating account..." : "Create Account"}
+                      <Button
+                        type="submit"
+                        className="w-full bg-rose-500 hover:bg-rose-600"
+                        disabled={register.isPending}
+                      >
+                        {register.isPending ? "Creating account..." : "Sign Up"}
                       </Button>
                     </motion.form>
                   </TabsContent>
@@ -284,7 +351,9 @@ export default function AuthPage() {
                       <Separator />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                      <span className="bg-white px-2 text-gray-500">
+                        Or continue with
+                      </span>
                     </div>
                   </div>
 
@@ -311,7 +380,11 @@ export default function AuthPage() {
                       Google
                     </Button>
                     <Button variant="outline" className="w-full">
-                      <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-4 h-4 mr-2"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                       </svg>
                       Facebook
@@ -324,5 +397,5 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

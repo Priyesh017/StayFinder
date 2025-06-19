@@ -1,75 +1,103 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { motion } from "framer-motion"
-import { Calendar, Heart, MapPin, Star, CreditCard, User, Bell, MessageCircle, Edit, Save, X } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import Image from "next/image"
-import { useRouter } from "next/navigation"
-import Header from "@/components/header"
-import { useAuth } from "@/contexts/auth-context"
-import { useBooking } from "@/contexts/booking-context"
-import { useFavorites } from "@/contexts/favorites-context"
-import { useProperties } from "@/contexts/properties-context"
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Calendar,
+  Heart,
+  MapPin,
+  Star,
+  CreditCard,
+  User,
+  Bell,
+  MessageCircle,
+  Edit,
+  Save,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import Header from "@/components/welcomePage/header";
+import { useCurrentUser, useUpdateProfile } from "@/hooks/auth/useAuth";
+import { useUserBookings } from "@/hooks/booking/useBooking";
+import { useFavorites } from "@/hooks/favorites/useFavourite";
+import { useProperties } from "@/hooks/properties/useProperties";
+import { Booking } from "@/types/booking";
+import { Property } from "@/types/property";
 
 export default function UserDashboard() {
-  const { user, updateProfile } = useAuth()
-  const { bookings } = useBooking()
-  const { favorites } = useFavorites()
-  const { properties } = useProperties()
-  const { toast } = useToast()
-  const router = useRouter()
+  const updateProfile = useUpdateProfile();
+  const { data: user } = useCurrentUser();
+  const bookings = useUserBookings();
+  const favorites = useFavorites();
+  const properties = useProperties();
+  const { toast } = useToast();
+  const router = useRouter();
 
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [editedUser, setEditedUser] = useState(user)
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editedUser, setEditedUser] = useState(user);
 
   useEffect(() => {
     if (!user) {
-      router.push("/login")
+      router.push("/login");
     } else {
-      setEditedUser(user)
+      setEditedUser(user);
     }
-  }, [user, router])
+  }, [user, router]);
 
   if (!user) {
-    return null
+    return null;
   }
 
-  const upcomingBookings = bookings.filter(
-    (booking) => booking.status === "confirmed" && new Date(booking.checkIn) > new Date(),
-  )
+  const upcomingBookings = (bookings.data?.data ?? []).filter(
+    (booking: Booking) =>
+      booking.status === "CONFIRMED" && new Date(booking.checkIn) > new Date()
+  );
 
-  const pastBookings = bookings.filter(
-    (booking) => booking.status === "completed" || new Date(booking.checkOut) < new Date(),
-  )
+  const pastBookings = (bookings.data?.data ?? []).filter(
+    (booking: Booking) =>
+      booking.status === "CONFIRMED" || new Date(booking.checkOut) < new Date()
+  );
 
-  const favoriteProperties = properties.filter((property) => favorites.includes(property.id))
+  const favoriteProperties = (properties.data?.data ?? []).filter(
+    (property: Property) => (favorites.data ?? []).includes(property.id)
+  );
 
-  const totalSpent = bookings.reduce((sum, booking) => sum + booking.totalPrice, 0)
+  const totalSpent = (bookings.data?.data ?? []).reduce(
+    (sum: number, booking: Booking) => sum + booking.totalPrice,
+    0
+  );
 
   const handleSaveProfile = () => {
     if (editedUser) {
-      updateProfile(editedUser)
-      setIsEditingProfile(false)
+      updateProfile.mutate(editedUser);
+      setIsEditingProfile(false);
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
-      })
+      });
     }
-  }
+  };
 
   const handleCancelEdit = () => {
-    setEditedUser(user)
-    setIsEditingProfile(false)
-  }
+    setEditedUser(user);
+    setIsEditingProfile(false);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,8 +122,12 @@ export default function UserDashboard() {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Welcome back, {user.firstName}!</h1>
-                  <p className="text-gray-600 mt-1">Manage your bookings and explore new destinations</p>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
+                    Welcome back, {user.firstName}!
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    Manage your bookings and explore new destinations
+                  </p>
                   <div className="flex items-center gap-2 mt-2">
                     {user.isVerified ? (
                       <Badge variant="default" className="text-xs">
@@ -146,40 +178,60 @@ export default function UserDashboard() {
               >
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Total Bookings
+                    </CardTitle>
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{bookings.length}</div>
-                    <p className="text-xs text-muted-foreground">{upcomingBookings.length} upcoming</p>
+                    <div className="text-2xl font-bold">
+                      {bookings.data?.data.length ?? 0}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {upcomingBookings.length} upcoming
+                    </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Total Spent
+                    </CardTitle>
                     <CreditCard className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">${totalSpent.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">Across all bookings</p>
+                    <div className="text-2xl font-bold">
+                      ${totalSpent.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Across all bookings
+                    </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Favorite Places</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Favorite Places
+                    </CardTitle>
                     <Heart className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{favorites.length}</div>
-                    <p className="text-xs text-muted-foreground">Saved for later</p>
+                    <div className="text-2xl font-bold">
+                      {favorites.data?.length}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Saved for later
+                    </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Member Since</CardTitle>
+                    <CardTitle className="text-sm font-medium">
+                      Member Since
+                    </CardTitle>
                     <User className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
@@ -200,49 +252,70 @@ export default function UserDashboard() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Upcoming Trips</CardTitle>
-                    <CardDescription>Your confirmed reservations</CardDescription>
+                    <CardDescription>
+                      Your confirmed reservations
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {upcomingBookings.length > 0 ? (
                       <div className="space-y-4">
-                        {upcomingBookings.slice(0, 3).map((booking) => (
-                          <div
-                            key={booking.id}
-                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
-                          >
-                            <div className="flex items-center gap-4 min-w-0 flex-1">
-                              <Image
-                                src={booking.propertyImage || "/placeholder.svg"}
-                                alt={booking.propertyTitle}
-                                width={80}
-                                height={60}
-                                className="rounded-lg object-cover flex-shrink-0"
-                              />
-                              <div className="min-w-0 flex-1">
-                                <h4 className="font-semibold truncate">{booking.propertyTitle}</h4>
-                                <p className="text-sm text-gray-600">Host: {booking.hostName}</p>
-                                <p className="text-xs text-gray-500">
-                                  {booking.checkIn} - {booking.checkOut} • {booking.guests} guests
-                                </p>
+                        {upcomingBookings
+                          .slice(0, 3)
+                          .map((booking: Booking) => (
+                            <div
+                              key={booking.id}
+                              className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
+                            >
+                              <div className="flex items-center gap-4 min-w-0 flex-1">
+                                <Image
+                                  src={
+                                    booking.listing.images[0] ||
+                                    "/placeholder.svg"
+                                  }
+                                  alt={booking.listing.title}
+                                  width={80}
+                                  height={60}
+                                  className="rounded-lg object-cover flex-shrink-0"
+                                />
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="font-semibold truncate">
+                                    {booking.listing.title}
+                                  </h4>
+                                  <p className="text-sm text-gray-600">
+                                    Host:{" "}
+                                    {booking.listing.host.firstName +
+                                      " " +
+                                      booking.listing.host.lastName}
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    {booking.checkIn} - {booking.checkOut} •{" "}
+                                    {booking.guests} guests
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 flex-shrink-0">
+                                <div className="text-right">
+                                  <Badge variant="default">Confirmed</Badge>
+                                  <p className="text-sm font-semibold mt-1">
+                                    ${booking.totalPrice}
+                                  </p>
+                                </div>
+                                <Button variant="outline" size="sm">
+                                  View Details
+                                </Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-4 flex-shrink-0">
-                              <div className="text-right">
-                                <Badge variant="default">Confirmed</Badge>
-                                <p className="text-sm font-semibold mt-1">${booking.totalPrice}</p>
-                              </div>
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
                         <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No upcoming trips</h3>
-                        <p className="text-gray-600 mb-4">Start planning your next adventure!</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No upcoming trips
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          Start planning your next adventure!
+                        </p>
                         <Link href="/search">
                           <Button>Explore destinations</Button>
                         </Link>
@@ -266,40 +339,52 @@ export default function UserDashboard() {
                   <CardContent>
                     {favoriteProperties.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {favoriteProperties.slice(0, 6).map((property) => (
-                          <div
-                            key={property.id}
-                            className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-                          >
-                            <Image
-                              src={property.images[0] || "/placeholder.svg"}
-                              alt={property.title}
-                              width={300}
-                              height={200}
-                              className="w-full h-32 object-cover"
-                            />
-                            <div className="p-3">
-                              <h4 className="font-semibold text-sm mb-1 truncate">{property.title}</h4>
-                              <p className="text-xs text-gray-600 flex items-center gap-1 mb-2">
-                                <MapPin className="h-3 w-3" />
-                                {property.location}
-                              </p>
-                              <div className="flex items-center justify-between">
-                                <span className="font-bold text-sm">${property.price}/night</span>
-                                <div className="flex items-center gap-1">
-                                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-xs">{property.rating}</span>
+                        {favoriteProperties
+                          .slice(0, 6)
+                          .map((property: Property) => (
+                            <div
+                              key={property.id}
+                              className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+                            >
+                              <Image
+                                src={property.images[0] || "/placeholder.svg"}
+                                alt={property.title}
+                                width={300}
+                                height={200}
+                                className="w-full h-32 object-cover"
+                              />
+                              <div className="p-3">
+                                <h4 className="font-semibold text-sm mb-1 truncate">
+                                  {property.title}
+                                </h4>
+                                <p className="text-xs text-gray-600 flex items-center gap-1 mb-2">
+                                  <MapPin className="h-3 w-3" />
+                                  {property.location}
+                                </p>
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-sm">
+                                    ${property.price}/night
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                    <span className="text-xs">
+                                      {property.rating}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     ) : (
                       <div className="text-center py-8">
                         <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No favorites yet</h3>
-                        <p className="text-gray-600 mb-4">Save properties you love for easy access later</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No favorites yet
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          Save properties you love for easy access later
+                        </p>
                         <Link href="/search">
                           <Button>Start exploring</Button>
                         </Link>
@@ -311,33 +396,50 @@ export default function UserDashboard() {
             </TabsContent>
 
             <TabsContent value="bookings" className="space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
                 <Card>
                   <CardHeader>
                     <CardTitle>All Bookings</CardTitle>
-                    <CardDescription>Your booking history and upcoming trips</CardDescription>
+                    <CardDescription>
+                      Your booking history and upcoming trips
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {bookings.length > 0 ? (
+                    {bookings.data?.data.length || 0 > 0 ? (
                       <div className="space-y-4">
-                        {bookings.map((booking) => (
+                        {bookings.data?.data.map((booking: Booking) => (
                           <div
                             key={booking.id}
                             className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border rounded-lg gap-4"
                           >
                             <div className="flex items-center gap-4 min-w-0 flex-1">
                               <Image
-                                src={booking.propertyImage || "/placeholder.svg"}
-                                alt={booking.propertyTitle}
+                                src={
+                                  booking.listing.images[0] ||
+                                  "/placeholder.svg"
+                                }
+                                alt={booking.listing.title}
                                 width={80}
                                 height={60}
                                 className="rounded-lg object-cover flex-shrink-0"
                               />
                               <div className="min-w-0 flex-1">
-                                <h4 className="font-semibold truncate">{booking.propertyTitle}</h4>
-                                <p className="text-sm text-gray-600">Host: {booking.hostName}</p>
+                                <h4 className="font-semibold truncate">
+                                  {booking.listing.title}
+                                </h4>
+                                <p className="text-sm text-gray-600">
+                                  Host:{" "}
+                                  {booking.listing.host.firstName +
+                                    " " +
+                                    booking.listing.host.lastName}
+                                </p>
                                 <p className="text-xs text-gray-500">
-                                  {booking.checkIn} - {booking.checkOut} • {booking.guests} guests
+                                  {booking.checkIn} - {booking.checkOut} •{" "}
+                                  {booking.guests} guests
                                 </p>
                               </div>
                             </div>
@@ -345,18 +447,20 @@ export default function UserDashboard() {
                               <div className="text-right">
                                 <Badge
                                   variant={
-                                    booking.status === "confirmed"
+                                    booking.status === "CONFIRMED"
                                       ? "default"
-                                      : booking.status === "pending"
-                                        ? "secondary"
-                                        : booking.status === "cancelled"
-                                          ? "destructive"
-                                          : "outline"
+                                      : booking.status === "PENDING"
+                                      ? "secondary"
+                                      : booking.status === "CANCELLED"
+                                      ? "destructive"
+                                      : "outline"
                                   }
                                 >
                                   {booking.status}
                                 </Badge>
-                                <p className="text-sm font-semibold mt-1">${booking.totalPrice}</p>
+                                <p className="text-sm font-semibold mt-1">
+                                  ${booking.totalPrice}
+                                </p>
                               </div>
                               <Button variant="outline" size="sm">
                                 View Details
@@ -368,8 +472,12 @@ export default function UserDashboard() {
                     ) : (
                       <div className="text-center py-8">
                         <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings yet</h3>
-                        <p className="text-gray-600 mb-4">Book your first stay to get started</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No bookings yet
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          Book your first stay to get started
+                        </p>
                         <Link href="/search">
                           <Button>Find a place to stay</Button>
                         </Link>
@@ -381,16 +489,22 @@ export default function UserDashboard() {
             </TabsContent>
 
             <TabsContent value="favorites" className="space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
                 <Card>
                   <CardHeader>
                     <CardTitle>Favorite Properties</CardTitle>
-                    <CardDescription>Places you've saved for later</CardDescription>
+                    <CardDescription>
+                      Places you've saved for later
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     {favoriteProperties.length > 0 ? (
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {favoriteProperties.map((property) => (
+                        {favoriteProperties.map((property: Property) => (
                           <div
                             key={property.id}
                             className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow"
@@ -403,16 +517,22 @@ export default function UserDashboard() {
                               className="w-full h-48 object-cover"
                             />
                             <div className="p-4">
-                              <h4 className="font-semibold mb-1">{property.title}</h4>
+                              <h4 className="font-semibold mb-1">
+                                {property.title}
+                              </h4>
                               <p className="text-sm text-gray-600 flex items-center gap-1 mb-2">
                                 <MapPin className="h-3 w-3" />
                                 {property.location}
                               </p>
                               <div className="flex items-center justify-between mb-3">
-                                <span className="font-bold">${property.price}/night</span>
+                                <span className="font-bold">
+                                  ${property.price}/night
+                                </span>
                                 <div className="flex items-center gap-1">
                                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                  <span className="text-sm">{property.rating}</span>
+                                  <span className="text-sm">
+                                    {property.rating}
+                                  </span>
                                 </div>
                               </div>
                               <Link href={`/property/${property.id}`}>
@@ -427,8 +547,12 @@ export default function UserDashboard() {
                     ) : (
                       <div className="text-center py-8">
                         <Heart className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No favorites yet</h3>
-                        <p className="text-gray-600 mb-4">Save properties you love for easy access later</p>
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No favorites yet
+                        </h3>
+                        <p className="text-gray-600 mb-4">
+                          Save properties you love for easy access later
+                        </p>
                         <Link href="/search">
                           <Button>Start exploring</Button>
                         </Link>
@@ -440,16 +564,25 @@ export default function UserDashboard() {
             </TabsContent>
 
             <TabsContent value="profile" className="space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
                 <Card>
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle>Profile Information</CardTitle>
-                        <CardDescription>Manage your personal information</CardDescription>
+                        <CardDescription>
+                          Manage your personal information
+                        </CardDescription>
                       </div>
                       {!isEditingProfile ? (
-                        <Button variant="outline" onClick={() => setIsEditingProfile(true)}>
+                        <Button
+                          variant="outline"
+                          onClick={() => setIsEditingProfile(true)}
+                        >
                           <Edit className="h-4 w-4 mr-2" />
                           Edit Profile
                         </Button>
@@ -511,12 +644,20 @@ export default function UserDashboard() {
                             id="firstName"
                             value={editedUser?.firstName || ""}
                             onChange={(e) =>
-                              setEditedUser((prev) => (prev ? { ...prev, firstName: e.target.value } : null))
+                              setEditedUser((prev) =>
+                                prev
+                                  ? { ...prev, firstName: e.target.value }
+                                  : prev
+                              )
                             }
                             className="mt-1"
                           />
                         ) : (
-                          <Input value={user.firstName} className="mt-1" readOnly />
+                          <Input
+                            value={user.firstName}
+                            className="mt-1"
+                            readOnly
+                          />
                         )}
                       </div>
                       <div>
@@ -526,17 +667,31 @@ export default function UserDashboard() {
                             id="lastName"
                             value={editedUser?.lastName || ""}
                             onChange={(e) =>
-                              setEditedUser((prev) => (prev ? { ...prev, lastName: e.target.value } : null))
+                              setEditedUser((prev) =>
+                                prev
+                                  ? { ...prev, lastName: e.target.value }
+                                  : prev
+                              )
                             }
                             className="mt-1"
                           />
                         ) : (
-                          <Input value={user.lastName} className="mt-1" readOnly />
+                          <Input
+                            value={user.lastName}
+                            className="mt-1"
+                            readOnly
+                          />
                         )}
                       </div>
                       <div>
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" value={user.email} className="mt-1" readOnly />
+                        <Input
+                          id="email"
+                          type="email"
+                          value={user.email}
+                          className="mt-1"
+                          readOnly
+                        />
                       </div>
                       <div>
                         <Label htmlFor="phone">Phone</Label>
@@ -546,12 +701,18 @@ export default function UserDashboard() {
                             type="tel"
                             value={editedUser?.phone || ""}
                             onChange={(e) =>
-                              setEditedUser((prev) => (prev ? { ...prev, phone: e.target.value } : null))
+                              setEditedUser((prev) =>
+                                prev ? { ...prev, phone: e.target.value } : prev
+                              )
                             }
                             className="mt-1"
                           />
                         ) : (
-                          <Input value={user.phone || ""} className="mt-1" readOnly />
+                          <Input
+                            value={user.phone || ""}
+                            className="mt-1"
+                            readOnly
+                          />
                         )}
                       </div>
                     </div>
@@ -568,11 +729,17 @@ export default function UserDashboard() {
             </TabsContent>
 
             <TabsContent value="payments" className="space-y-6">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+              >
                 <Card>
                   <CardHeader>
                     <CardTitle>Payment Methods</CardTitle>
-                    <CardDescription>Manage your payment information</CardDescription>
+                    <CardDescription>
+                      Manage your payment information
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -581,7 +748,9 @@ export default function UserDashboard() {
                           <CreditCard className="h-8 w-8 text-gray-400" />
                           <div>
                             <p className="font-semibold">•••• •••• •••• 4242</p>
-                            <p className="text-sm text-gray-600">Expires 12/25</p>
+                            <p className="text-sm text-gray-600">
+                              Expires 12/25
+                            </p>
                           </div>
                         </div>
                         <Badge variant="secondary">Default</Badge>
@@ -595,20 +764,29 @@ export default function UserDashboard() {
                     <div className="mt-8">
                       <h4 className="font-semibold mb-4">Payment History</h4>
                       <div className="space-y-3">
-                        {bookings.slice(0, 5).map((booking) => (
-                          <div key={booking.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                              <p className="font-medium">{booking.propertyTitle}</p>
-                              <p className="text-sm text-gray-600">
-                                {booking.checkIn} - {booking.checkOut}
-                              </p>
+                        {(bookings.data?.data ?? [])
+                          .slice(0, 5)
+                          .map((booking: Booking) => (
+                            <div
+                              key={booking.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  {booking.listing.title}
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  {booking.checkIn} - {booking.checkOut}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">
+                                  ${booking.totalPrice}
+                                </p>
+                                <p className="text-xs text-gray-500">Paid</p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold">${booking.totalPrice}</p>
-                              <p className="text-xs text-gray-500">Paid</p>
-                            </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     </div>
                   </CardContent>
@@ -619,5 +797,5 @@ export default function UserDashboard() {
         </div>
       </div>
     </div>
-  )
+  );
 }

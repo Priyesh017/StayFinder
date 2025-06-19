@@ -1,39 +1,53 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { X, ArrowLeft, Calendar, Users, CreditCard, Shield, CheckCircle, Star, MapPin } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { format } from "date-fns"
-import Image from "next/image"
-import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  ArrowLeft,
+  Calendar,
+  Users,
+  CreditCard,
+  Shield,
+  CheckCircle,
+  Star,
+  MapPin,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { format } from "date-fns";
+import Image from "next/image";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 import {
   useReservationStore,
   type ReservationDetails,
   type GuestDetails,
   type PaymentDetails,
-} from "@/stores/reservation-store"
-import { useAuth } from "@/contexts/auth-context"
-import { useBooking } from "@/contexts/booking-context"
+} from "@/stores/reservation-store";
+import { useAuth } from "@/contexts/useAuth";
+import { useBooking } from "@/contexts/booking-context";
 
 interface ReservationModalProps {
-  isOpen: boolean
-  onClose: () => void
-  reservation: ReservationDetails
+  isOpen: boolean;
+  onClose: () => void;
+  reservation: ReservationDetails;
 }
 
-export function ReservationModal({ isOpen, onClose, reservation }: ReservationModalProps) {
-  const { user } = useAuth()
-  const { addBooking } = useBooking()
-  const { toast } = useToast()
-  const router = useRouter()
+export function ReservationModal({
+  isOpen,
+  onClose,
+  reservation,
+}: ReservationModalProps) {
+  const { user } = useAuth();
+  const { addBooking } = useBooking();
+  const { toast } = useToast();
+  const router = useRouter();
 
   const {
     currentStep,
@@ -47,42 +61,43 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
     nextStep,
     prevStep,
     resetReservation,
-  } = useReservationStore()
+  } = useReservationStore();
 
   const [localGuestDetails, setLocalGuestDetails] = useState<GuestDetails>({
-    firstName: user?.name?.split(" ")[0] || "",
-    lastName: user?.name?.split(" ")[1] || "",
+    firstName: user?.firstName?.split(" ")[0] || "",
+    lastName: user?.lastName?.split(" ")[1] || "",
     email: user?.email || "",
     phone: "",
     specialRequests: "",
-  })
+  });
 
-  const [localPaymentDetails, setLocalPaymentDetails] = useState<PaymentDetails>({
-    cardNumber: "",
-    expiryDate: "",
-    cvv: "",
-    cardholderName: "",
-    billingAddress: {
-      street: "",
-      city: "",
-      state: "",
-      zipCode: "",
-      country: "United States",
-    },
-  })
+  const [localPaymentDetails, setLocalPaymentDetails] =
+    useState<PaymentDetails>({
+      cardNumber: "",
+      expiryDate: "",
+      cvv: "",
+      cardholderName: "",
+      billingAddress: {
+        street: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "United States",
+      },
+    });
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentStep(1)
+      setCurrentStep(1);
     } else {
-      resetReservation()
+      resetReservation();
     }
-  }, [isOpen, setCurrentStep, resetReservation])
+  }, [isOpen, setCurrentStep, resetReservation]);
 
   const handleClose = () => {
-    resetReservation()
-    onClose()
-  }
+    resetReservation();
+    onClose();
+  };
 
   const handleNextStep = () => {
     if (currentStep === 1) {
@@ -97,10 +112,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
           title: "Missing Information",
           description: "Please fill in all required fields",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
-      setGuestDetails(localGuestDetails)
+      setGuestDetails(localGuestDetails);
     } else if (currentStep === 2) {
       // Validate payment details
       if (
@@ -113,19 +128,19 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
           title: "Missing Payment Information",
           description: "Please fill in all payment details",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
-      setPaymentDetails(localPaymentDetails)
+      setPaymentDetails(localPaymentDetails);
     }
-    nextStep()
-  }
+    nextStep();
+  };
 
   const handleConfirmBooking = async () => {
-    setProcessing(true)
+    setProcessing(true);
 
     // Simulate payment processing
-    await new Promise((resolve) => setTimeout(resolve, 3000))
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     const booking = {
       propertyId: reservation.propertyId,
@@ -137,21 +152,22 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
       guests: reservation.guests.adults + reservation.guests.children,
       totalPrice: reservation.total,
       status: "confirmed" as const,
-    }
+    };
 
-    addBooking(booking)
-    setProcessing(false)
+    addBooking(booking);
+    setProcessing(false);
 
     toast({
       title: "Booking Confirmed!",
-      description: "Your reservation has been confirmed. You'll receive a confirmation email shortly.",
-    })
+      description:
+        "Your reservation has been confirmed. You'll receive a confirmation email shortly.",
+    });
 
-    handleClose()
-    router.push("/dashboard/bookings")
-  }
+    handleClose();
+    router.push("/dashboard/bookings");
+  };
 
-  const stepTitles = ["Your trip", "Payment details", "Confirm and pay"]
+  const stepTitles = ["Your trip", "Payment details", "Confirm and pay"];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -168,7 +184,9 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                   </Button>
                 )}
                 <div>
-                  <h2 className="text-2xl font-bold">{stepTitles[currentStep - 1]}</h2>
+                  <h2 className="text-2xl font-bold">
+                    {stepTitles[currentStep - 1]}
+                  </h2>
                   <p className="text-gray-600">Step {currentStep} of 3</p>
                 </div>
               </div>
@@ -182,7 +200,9 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
               {[1, 2, 3].map((step) => (
                 <div
                   key={step}
-                  className={`h-1 flex-1 rounded-full ${step <= currentStep ? "bg-rose-500" : "bg-gray-200"}`}
+                  className={`h-1 flex-1 rounded-full ${
+                    step <= currentStep ? "bg-rose-500" : "bg-gray-200"
+                  }`}
                 />
               ))}
             </div>
@@ -198,14 +218,21 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                   className="space-y-6"
                 >
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Who's coming?</h3>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Who's coming?
+                    </h3>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="firstName">First name *</Label>
                         <Input
                           id="firstName"
                           value={localGuestDetails.firstName}
-                          onChange={(e) => setLocalGuestDetails((prev) => ({ ...prev, firstName: e.target.value }))}
+                          onChange={(e) =>
+                            setLocalGuestDetails((prev) => ({
+                              ...prev,
+                              firstName: e.target.value,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -214,7 +241,12 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                         <Input
                           id="lastName"
                           value={localGuestDetails.lastName}
-                          onChange={(e) => setLocalGuestDetails((prev) => ({ ...prev, lastName: e.target.value }))}
+                          onChange={(e) =>
+                            setLocalGuestDetails((prev) => ({
+                              ...prev,
+                              lastName: e.target.value,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -227,7 +259,12 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                       id="email"
                       type="email"
                       value={localGuestDetails.email}
-                      onChange={(e) => setLocalGuestDetails((prev) => ({ ...prev, email: e.target.value }))}
+                      onChange={(e) =>
+                        setLocalGuestDetails((prev) => ({
+                          ...prev,
+                          email: e.target.value,
+                        }))
+                      }
                       className="mt-1"
                     />
                   </div>
@@ -238,17 +275,29 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                       id="phone"
                       type="tel"
                       value={localGuestDetails.phone}
-                      onChange={(e) => setLocalGuestDetails((prev) => ({ ...prev, phone: e.target.value }))}
+                      onChange={(e) =>
+                        setLocalGuestDetails((prev) => ({
+                          ...prev,
+                          phone: e.target.value,
+                        }))
+                      }
                       className="mt-1"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="specialRequests">Special requests (optional)</Label>
+                    <Label htmlFor="specialRequests">
+                      Special requests (optional)
+                    </Label>
                     <Textarea
                       id="specialRequests"
                       value={localGuestDetails.specialRequests}
-                      onChange={(e) => setLocalGuestDetails((prev) => ({ ...prev, specialRequests: e.target.value }))}
+                      onChange={(e) =>
+                        setLocalGuestDetails((prev) => ({
+                          ...prev,
+                          specialRequests: e.target.value,
+                        }))
+                      }
                       placeholder="Any special requests or accessibility needs?"
                       className="mt-1"
                     />
@@ -257,10 +306,13 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                   <div className="bg-gray-50 p-4 rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield className="h-5 w-5 text-green-600" />
-                      <span className="font-medium">Your information is secure</span>
+                      <span className="font-medium">
+                        Your information is secure
+                      </span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      We use secure encryption to protect your personal information.
+                      We use secure encryption to protect your personal
+                      information.
                     </p>
                   </div>
                 </motion.div>
@@ -276,7 +328,9 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                   className="space-y-6"
                 >
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Payment method</h3>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Payment method
+                    </h3>
 
                     <div className="space-y-4">
                       <div>
@@ -285,7 +339,12 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                           id="cardNumber"
                           placeholder="1234 5678 9012 3456"
                           value={localPaymentDetails.cardNumber}
-                          onChange={(e) => setLocalPaymentDetails((prev) => ({ ...prev, cardNumber: e.target.value }))}
+                          onChange={(e) =>
+                            setLocalPaymentDetails((prev) => ({
+                              ...prev,
+                              cardNumber: e.target.value,
+                            }))
+                          }
                           className="mt-1"
                         />
                       </div>
@@ -298,7 +357,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                             placeholder="MM/YY"
                             value={localPaymentDetails.expiryDate}
                             onChange={(e) =>
-                              setLocalPaymentDetails((prev) => ({ ...prev, expiryDate: e.target.value }))
+                              setLocalPaymentDetails((prev) => ({
+                                ...prev,
+                                expiryDate: e.target.value,
+                              }))
                             }
                             className="mt-1"
                           />
@@ -309,19 +371,29 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                             id="cvv"
                             placeholder="123"
                             value={localPaymentDetails.cvv}
-                            onChange={(e) => setLocalPaymentDetails((prev) => ({ ...prev, cvv: e.target.value }))}
+                            onChange={(e) =>
+                              setLocalPaymentDetails((prev) => ({
+                                ...prev,
+                                cvv: e.target.value,
+                              }))
+                            }
                             className="mt-1"
                           />
                         </div>
                       </div>
 
                       <div>
-                        <Label htmlFor="cardholderName">Cardholder name *</Label>
+                        <Label htmlFor="cardholderName">
+                          Cardholder name *
+                        </Label>
                         <Input
                           id="cardholderName"
                           value={localPaymentDetails.cardholderName}
                           onChange={(e) =>
-                            setLocalPaymentDetails((prev) => ({ ...prev, cardholderName: e.target.value }))
+                            setLocalPaymentDetails((prev) => ({
+                              ...prev,
+                              cardholderName: e.target.value,
+                            }))
                           }
                           className="mt-1"
                         />
@@ -340,7 +412,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                           onChange={(e) =>
                             setLocalPaymentDetails((prev) => ({
                               ...prev,
-                              billingAddress: { ...prev.billingAddress, street: e.target.value },
+                              billingAddress: {
+                                ...prev.billingAddress,
+                                street: e.target.value,
+                              },
                             }))
                           }
                           className="mt-1"
@@ -355,7 +430,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                             onChange={(e) =>
                               setLocalPaymentDetails((prev) => ({
                                 ...prev,
-                                billingAddress: { ...prev.billingAddress, city: e.target.value },
+                                billingAddress: {
+                                  ...prev.billingAddress,
+                                  city: e.target.value,
+                                },
                               }))
                             }
                             className="mt-1"
@@ -369,7 +447,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                             onChange={(e) =>
                               setLocalPaymentDetails((prev) => ({
                                 ...prev,
-                                billingAddress: { ...prev.billingAddress, state: e.target.value },
+                                billingAddress: {
+                                  ...prev.billingAddress,
+                                  state: e.target.value,
+                                },
                               }))
                             }
                             className="mt-1"
@@ -385,7 +466,8 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                       <span className="font-medium">Secure payment</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Your payment information is encrypted and secure. We accept all major credit cards.
+                      Your payment information is encrypted and secure. We
+                      accept all major credit cards.
                     </p>
                   </div>
                 </motion.div>
@@ -401,7 +483,9 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                   className="space-y-6"
                 >
                   <div>
-                    <h3 className="text-lg font-semibold mb-4">Review your booking</h3>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Review your booking
+                    </h3>
 
                     <div className="space-y-4">
                       <div className="flex items-center gap-3">
@@ -411,7 +495,9 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                             {format(reservation.checkInDate, "MMM dd, yyyy")} -{" "}
                             {format(reservation.checkOutDate, "MMM dd, yyyy")}
                           </p>
-                          <p className="text-sm text-gray-600">{reservation.nights} nights</p>
+                          <p className="text-sm text-gray-600">
+                            {reservation.nights} nights
+                          </p>
                         </div>
                       </div>
 
@@ -419,12 +505,16 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                         <Users className="h-5 w-5 text-gray-400" />
                         <div>
                           <p className="font-medium">
-                            {reservation.guests.adults + reservation.guests.children} guests
+                            {reservation.guests.adults +
+                              reservation.guests.children}{" "}
+                            guests
                           </p>
                           <p className="text-sm text-gray-600">
                             {reservation.guests.adults} adults
-                            {reservation.guests.children > 0 && `, ${reservation.guests.children} children`}
-                            {reservation.guests.infants > 0 && `, ${reservation.guests.infants} infants`}
+                            {reservation.guests.children > 0 &&
+                              `, ${reservation.guests.children} children`}
+                            {reservation.guests.infants > 0 &&
+                              `, ${reservation.guests.infants} infants`}
                           </p>
                         </div>
                       </div>
@@ -438,13 +528,19 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                     <p className="text-sm text-gray-600">
                       {guestDetails?.firstName} {guestDetails?.lastName}
                     </p>
-                    <p className="text-sm text-gray-600">{guestDetails?.email}</p>
-                    <p className="text-sm text-gray-600">{guestDetails?.phone}</p>
+                    <p className="text-sm text-gray-600">
+                      {guestDetails?.email}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {guestDetails?.phone}
+                    </p>
                   </div>
 
                   <div>
                     <h4 className="font-semibold mb-2">Payment method</h4>
-                    <p className="text-sm text-gray-600">•••• •••• •••• {paymentDetails?.cardNumber.slice(-4)}</p>
+                    <p className="text-sm text-gray-600">
+                      •••• •••• •••• {paymentDetails?.cardNumber.slice(-4)}
+                    </p>
                   </div>
 
                   <div className="bg-green-50 p-4 rounded-lg">
@@ -453,7 +549,8 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                       <span className="font-medium">Free cancellation</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Cancel before {format(reservation.checkInDate, "MMM dd")} for a full refund.
+                      Cancel before {format(reservation.checkInDate, "MMM dd")}{" "}
+                      for a full refund.
                     </p>
                   </div>
                 </motion.div>
@@ -465,7 +562,10 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
               <div></div>
               <div className="flex gap-3">
                 {currentStep < 3 ? (
-                  <Button onClick={handleNextStep} className="bg-rose-500 hover:bg-rose-600">
+                  <Button
+                    onClick={handleNextStep}
+                    className="bg-rose-500 hover:bg-rose-600"
+                  >
                     Continue
                   </Button>
                 ) : (
@@ -501,14 +601,18 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
                     className="rounded-lg object-cover"
                   />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-sm truncate">{reservation.propertyTitle}</h4>
+                    <h4 className="font-semibold text-sm truncate">
+                      {reservation.propertyTitle}
+                    </h4>
                     <div className="flex items-center gap-1 mt-1">
                       <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                       <span className="text-xs">4.9 (127 reviews)</span>
                     </div>
                     <div className="flex items-center gap-1 mt-1">
                       <MapPin className="h-3 w-3 text-gray-400" />
-                      <span className="text-xs text-gray-600">{reservation.location}</span>
+                      <span className="text-xs text-gray-600">
+                        {reservation.location}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -546,5 +650,5 @@ export function ReservationModal({ isOpen, onClose, reservation }: ReservationMo
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

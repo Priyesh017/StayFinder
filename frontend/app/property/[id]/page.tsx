@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useMemo } from "react"
-import { motion } from "framer-motion"
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   Heart,
@@ -19,39 +19,46 @@ import {
   Minus,
   Plus,
   CheckCircle,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Separator } from "@/components/ui/separator"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { useToast } from "@/hooks/use-toast"
-import Link from "next/link"
-import Image from "next/image"
-import { format, differenceInDays, isBefore, addDays } from "date-fns"
-import { useRouter, useSearchParams } from "next/navigation"
-import Header from "@/components/header"
-import Footer from "@/components/footer"
-import { ReservationModal } from "@/components/reservation-modal"
-import { useAuth } from "@/contexts/auth-context"
-import { useFavorites } from "@/contexts/favorites-context"
-import { useProperties } from "@/contexts/properties-context"
-import { useSearchStore } from "@/stores/search-store"
-import { useReservationStore, type ReservationDetails } from "@/stores/reservation-store"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
+import Image from "next/image";
+import { format, differenceInDays, isBefore, addDays } from "date-fns";
+import { useRouter, useSearchParams } from "next/navigation";
+import Header from "@/components/welcomePage/header";
+import Footer from "@/components/welcomePage/footer";
+import { ReservationModal } from "@/components/reservation-modal";
+import { useAuth } from "@/contexts/useAuth";
+import { useFavorites } from "@/contexts/favorites-context";
+import { useProperties } from "@/contexts/properties-context";
+import { useSearchStore } from "@/stores/search-store";
+import {
+  useReservationStore,
+  type ReservationDetails,
+} from "@/stores/reservation-store";
 
 export default function PropertyPage({ params }: { params: { id: string } }) {
-  const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [showReservationModal, setShowReservationModal] = useState(false)
-  const [isInitialized, setIsInitialized] = useState(false)
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showReservationModal, setShowReservationModal] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const { user } = useAuth()
-  const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites()
-  const { getProperty } = useProperties()
-  const { toast } = useToast()
-  const router = useRouter()
-  const searchParams = useSearchParams()
+  const { user } = useAuth();
+  const { isFavorite, addToFavorites, removeFromFavorites } = useFavorites();
+  const { getProperty } = useProperties();
+  const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     checkInDate,
@@ -62,35 +69,41 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
     incrementGuest,
     decrementGuest,
     setSearchFromParams,
-  } = useSearchStore()
+  } = useSearchStore();
 
-  const { setReservation } = useReservationStore()
+  const { setReservation } = useReservationStore();
 
-  const property = getProperty(params.id)
+  const property = getProperty(params.id);
 
   // Initialize dates from search params only once
   useEffect(() => {
     if (searchParams && !isInitialized) {
-      setSearchFromParams(searchParams)
-      setIsInitialized(true)
+      setSearchFromParams(searchParams);
+      setIsInitialized(true);
     }
-  }, [searchParams, setSearchFromParams, isInitialized, checkInDate, checkOutDate])
+  }, [
+    searchParams,
+    setSearchFromParams,
+    isInitialized,
+    checkInDate,
+    checkOutDate,
+  ]);
 
   // Memoize calculations to prevent unnecessary re-renders
   const calculations = useMemo(() => {
     const calculateNights = () => {
       if (checkInDate && checkOutDate) {
-        return differenceInDays(checkOutDate, checkInDate)
+        return differenceInDays(checkOutDate, checkInDate);
       }
-      return 0
-    }
+      return 0;
+    };
 
-    const nights = calculateNights()
-    const subtotal = property ? property.price * nights : 0
-    const cleaningFee = 50
-    const serviceFee = Math.round(subtotal * 0.14)
-    const taxes = Math.round(subtotal * 0.12)
-    const total = subtotal + cleaningFee + serviceFee + taxes
+    const nights = calculateNights();
+    const subtotal = property ? property.price * nights : 0;
+    const cleaningFee = 50;
+    const serviceFee = Math.round(subtotal * 0.14);
+    const taxes = Math.round(subtotal * 0.12);
+    const total = subtotal + cleaningFee + serviceFee + taxes;
 
     return {
       nights,
@@ -99,23 +112,25 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
       serviceFee,
       taxes,
       total,
-    }
-  }, [checkInDate, checkOutDate, property?.price])
+    };
+  }, [checkInDate, checkOutDate, property?.price]);
 
   if (!property) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Property not found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            Property not found
+          </h1>
           <Link href="/search">
             <Button>Back to search</Button>
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
-  const isPropertyFavorite = isFavorite(property.id)
+  const isPropertyFavorite = isFavorite(property.id);
 
   const handleFavoriteToggle = () => {
     if (!user) {
@@ -123,24 +138,24 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         title: "Login Required",
         description: "Please log in to save favorites",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (isPropertyFavorite) {
-      removeFromFavorites(property.id)
+      removeFromFavorites(property.id);
       toast({
         title: "Removed from favorites",
         description: "Property removed from your favorites",
-      })
+      });
     } else {
-      addToFavorites(property.id)
+      addToFavorites(property.id);
       toast({
         title: "Added to favorites",
         description: "Property saved to your favorites",
-      })
+      });
     }
-  }
+  };
 
   const handleReservation = () => {
     if (!user) {
@@ -148,9 +163,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         title: "Login Required",
         description: "Please log in to make a booking",
         variant: "destructive",
-      })
-      router.push("/login")
-      return
+      });
+      router.push("/login");
+      return;
     }
 
     if (!checkInDate || !checkOutDate) {
@@ -158,8 +173,8 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         title: "Select Dates",
         description: "Please select check-in and check-out dates",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (calculations.nights < 1) {
@@ -167,8 +182,8 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         title: "Invalid Dates",
         description: "Check-out date must be after check-in date",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     if (isBefore(checkInDate, new Date())) {
@@ -176,8 +191,8 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         title: "Invalid Date",
         description: "Check-in date cannot be in the past",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     const reservationDetails: ReservationDetails = {
@@ -196,17 +211,17 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
       serviceFee: calculations.serviceFee,
       taxes: calculations.taxes,
       total: calculations.total,
-    }
+    };
 
-    setReservation(reservationDetails)
-    setShowReservationModal(true)
-  }
+    setReservation(reservationDetails);
+    setShowReservationModal(true);
+  };
 
   const isDateDisabled = (date: Date) => {
-    return isBefore(date, new Date())
-  }
+    return isBefore(date, new Date());
+  };
 
-  const totalGuests = guests.adults + guests.children
+  const totalGuests = guests.adults + guests.children;
 
   return (
     <div className="min-h-screen bg-white">
@@ -225,14 +240,22 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
 
         {/* Property Header */}
         <div className="max-w-7xl mx-auto px-4 mb-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{property.title}</h1>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
+              {property.title}
+            </h1>
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-1">
                   <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   <span className="font-medium">{property.rating}</span>
-                  <span className="text-gray-600">({property.reviews} reviews)</span>
+                  <span className="text-gray-600">
+                    ({property.reviews} reviews)
+                  </span>
                 </div>
                 <span className="text-gray-600">•</span>
                 <div className="flex items-center gap-1">
@@ -241,12 +264,25 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-2"
+                >
                   <Share className="h-4 w-4" />
                   <span className="hidden sm:inline">Share</span>
                 </Button>
-                <Button variant="ghost" size="sm" className="flex items-center gap-2" onClick={handleFavoriteToggle}>
-                  <Heart className={`h-4 w-4 ${isPropertyFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex items-center gap-2"
+                  onClick={handleFavoriteToggle}
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      isPropertyFavorite ? "fill-red-500 text-red-500" : ""
+                    }`}
+                  />
                   <span className="hidden sm:inline">Save</span>
                 </Button>
               </div>
@@ -308,8 +344,12 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                   </div>
                 </div>
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={property.host.avatar || "/placeholder.svg"} />
-                  <AvatarFallback>{property.host.name.charAt(0)}</AvatarFallback>
+                  <AvatarImage
+                    src={property.host.avatar || "/placeholder.svg"}
+                  />
+                  <AvatarFallback>
+                    {property.host.name.charAt(0)}
+                  </AvatarFallback>
                 </Avatar>
               </div>
 
@@ -317,7 +357,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
 
               {/* Highlights */}
               <div className="mb-6">
-                <h3 className="text-xl font-semibold mb-4">What this place offers</h3>
+                <h3 className="text-xl font-semibold mb-4">
+                  What this place offers
+                </h3>
                 <div className="space-y-3">
                   {property.highlights.map((highlight, index) => (
                     <div key={index} className="flex items-center gap-3">
@@ -333,7 +375,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
               {/* Description */}
               <div className="mb-6">
                 <h3 className="text-xl font-semibold mb-4">About this space</h3>
-                <p className="text-gray-700 leading-relaxed">{property.description}</p>
+                <p className="text-gray-700 leading-relaxed">
+                  {property.description}
+                </p>
               </div>
 
               <Separator className="my-6" />
@@ -346,28 +390,28 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                     const getAmenityIcon = (amenity: string) => {
                       switch (amenity.toLowerCase()) {
                         case "wifi":
-                          return Wifi
+                          return Wifi;
                         case "kitchen":
-                          return Coffee
+                          return Coffee;
                         case "parking":
-                          return Car
+                          return Car;
                         case "tv":
-                          return Tv
+                          return Tv;
                         case "air conditioning":
-                          return Wind
+                          return Wind;
                         case "pool":
-                          return Waves
+                          return Waves;
                         default:
-                          return CheckCircle
+                          return CheckCircle;
                       }
-                    }
-                    const IconComponent = getAmenityIcon(amenity)
+                    };
+                    const IconComponent = getAmenityIcon(amenity);
                     return (
                       <div key={index} className="flex items-center gap-3">
                         <IconComponent className="h-5 w-5 text-gray-600" />
                         <span>{amenity}</span>
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -386,13 +430,17 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-6">
                     <div>
-                      <span className="text-2xl font-bold">${property.price}</span>
+                      <span className="text-2xl font-bold">
+                        ${property.price}
+                      </span>
                       <span className="text-gray-600"> / night</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                       <span className="font-medium">{property.rating}</span>
-                      <span className="text-gray-600">({property.reviews})</span>
+                      <span className="text-gray-600">
+                        ({property.reviews})
+                      </span>
                     </div>
                   </div>
 
@@ -400,11 +448,20 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                     <div className="grid grid-cols-2 gap-2">
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="justify-start text-left font-normal h-12">
+                          <Button
+                            variant="outline"
+                            className="justify-start text-left font-normal h-12"
+                          >
                             <Calendar className="mr-2 h-4 w-4" />
                             <div>
-                              <div className="text-xs text-gray-500">CHECK-IN</div>
-                              <div className="text-sm">{checkInDate ? format(checkInDate, "MMM dd") : "Add date"}</div>
+                              <div className="text-xs text-gray-500">
+                                CHECK-IN
+                              </div>
+                              <div className="text-sm">
+                                {checkInDate
+                                  ? format(checkInDate, "MMM dd")
+                                  : "Add date"}
+                              </div>
                             </div>
                           </Button>
                         </PopoverTrigger>
@@ -421,12 +478,19 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
 
                       <Popover>
                         <PopoverTrigger asChild>
-                          <Button variant="outline" className="justify-start text-left font-normal h-12">
+                          <Button
+                            variant="outline"
+                            className="justify-start text-left font-normal h-12"
+                          >
                             <Calendar className="mr-2 h-4 w-4" />
                             <div>
-                              <div className="text-xs text-gray-500">CHECK-OUT</div>
+                              <div className="text-xs text-gray-500">
+                                CHECK-OUT
+                              </div>
                               <div className="text-sm">
-                                {checkOutDate ? format(checkOutDate, "MMM dd") : "Add date"}
+                                {checkOutDate
+                                  ? format(checkOutDate, "MMM dd")
+                                  : "Add date"}
                               </div>
                             </div>
                           </Button>
@@ -437,7 +501,10 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                             selected={checkOutDate}
                             onSelect={setCheckOutDate}
                             disabled={(date) =>
-                              isDateDisabled(date) || (checkInDate ? isBefore(date, addDays(checkInDate, 1)) : false)
+                              isDateDisabled(date) ||
+                              (checkInDate
+                                ? isBefore(date, addDays(checkInDate, 1))
+                                : false)
                             }
                             initialFocus
                           />
@@ -447,13 +514,19 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
 
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-left font-normal h-12">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start text-left font-normal h-12"
+                        >
                           <Users className="mr-2 h-4 w-4" />
                           <div>
                             <div className="text-xs text-gray-500">GUESTS</div>
                             <div className="text-sm">
                               {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
-                              {guests.infants > 0 && `, ${guests.infants} infant${guests.infants !== 1 ? "s" : ""}`}
+                              {guests.infants > 0 &&
+                                `, ${guests.infants} infant${
+                                  guests.infants !== 1 ? "s" : ""
+                                }`}
                             </div>
                           </div>
                         </Button>
@@ -463,7 +536,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium">Adults</p>
-                              <p className="text-sm text-gray-500">Ages 13 or above</p>
+                              <p className="text-sm text-gray-500">
+                                Ages 13 or above
+                              </p>
                             </div>
                             <div className="flex items-center gap-3">
                               <Button
@@ -475,7 +550,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="font-medium w-8 text-center">{guests.adults}</span>
+                              <span className="font-medium w-8 text-center">
+                                {guests.adults}
+                              </span>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -503,7 +580,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="font-medium w-8 text-center">{guests.children}</span>
+                              <span className="font-medium w-8 text-center">
+                                {guests.children}
+                              </span>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -531,7 +610,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="font-medium w-8 text-center">{guests.infants}</span>
+                              <span className="font-medium w-8 text-center">
+                                {guests.infants}
+                              </span>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -546,7 +627,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium">Pets</p>
-                              <p className="text-sm text-gray-500">Bringing a service animal?</p>
+                              <p className="text-sm text-gray-500">
+                                Bringing a service animal?
+                              </p>
                             </div>
                             <div className="flex items-center gap-3">
                               <Button
@@ -558,7 +641,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                               >
                                 <Minus className="h-3 w-3" />
                               </Button>
-                              <span className="font-medium w-8 text-center">{guests.pets}</span>
+                              <span className="font-medium w-8 text-center">
+                                {guests.pets}
+                              </span>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -582,13 +667,16 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                     {user ? "Reserve" : "Log in to Reserve"}
                   </Button>
 
-                  <p className="text-center text-sm text-gray-600 mb-4">You won't be charged yet</p>
+                  <p className="text-center text-sm text-gray-600 mb-4">
+                    You won't be charged yet
+                  </p>
 
                   {checkInDate && checkOutDate && calculations.nights > 0 && (
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between">
                         <span className="underline">
-                          ${property.price} x {calculations.nights} night{calculations.nights !== 1 ? "s" : ""}
+                          ${property.price} x {calculations.nights} night
+                          {calculations.nights !== 1 ? "s" : ""}
                         </span>
                         <span>${calculations.subtotal}</span>
                       </div>
@@ -619,8 +707,12 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                 <CardContent className="p-6">
                   <div className="flex items-center gap-4 mb-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={property.host.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>{property.host.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage
+                        src={property.host.avatar || "/placeholder.svg"}
+                      />
+                      <AvatarFallback>
+                        {property.host.name.charAt(0)}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
                       <h4 className="font-semibold">{property.host.name}</h4>
@@ -673,8 +765,9 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
                     </div>
                   </div>
                   <p className="text-gray-700">
-                    Amazing stay! The location was perfect and the host was very responsive. Would definitely recommend
-                    this place to anyone visiting the area.
+                    Amazing stay! The location was perfect and the host was very
+                    responsive. Would definitely recommend this place to anyone
+                    visiting the area.
                   </p>
                 </div>
               ))}
@@ -698,5 +791,5 @@ export default function PropertyPage({ params }: { params: { id: string } }) {
         />
       )}
     </div>
-  )
+  );
 }

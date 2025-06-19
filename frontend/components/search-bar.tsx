@@ -1,27 +1,42 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Search, MapPin, Calendar, Users, ChevronDown, Minus, Plus } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { Separator } from "@/components/ui/separator"
-import { format, isBefore, addDays } from "date-fns"
-import { useRouter } from "next/navigation"
-import { useSearchStore } from "@/stores/search-store"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Search,
+  MapPin,
+  Calendar,
+  Users,
+  ChevronDown,
+  Minus,
+  Plus,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Separator } from "@/components/ui/separator";
+import { format, isBefore, addDays } from "date-fns";
+import { useRouter } from "next/navigation";
+import { useSearchStore } from "@/stores/search-store";
 
 interface SearchBarProps {
-  variant?: "hero" | "header"
-  className?: string
+  variant?: "hero" | "header";
+  className?: string;
 }
 
-export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) {
-  const router = useRouter()
-  const [showGuestPicker, setShowGuestPicker] = useState(false)
+export function SearchBar({
+  variant = "hero",
+  className = "",
+}: SearchBarProps) {
+  const router = useRouter();
+  // const [showGuestPicker, setShowGuestPicker] = useState(false);
 
   const {
     location,
@@ -34,38 +49,46 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
     setCheckOutDate,
     incrementGuest,
     decrementGuest,
-  } = useSearchStore()
+  } = useSearchStore();
 
   const handleSearch = () => {
-    const searchParams = new URLSearchParams()
-    if (location.trim()) {
-      searchParams.set("location", location.trim())
-    }
+    if (!location.trim()) return;
+
+    const searchParams = new URLSearchParams();
+    searchParams.set("location", location.trim());
+
     if (checkInDate) {
-      searchParams.set("checkIn", format(checkInDate, "yyyy-MM-dd"))
+      searchParams.set("checkIn", format(checkInDate, "yyyy-MM-dd"));
     }
     if (checkOutDate) {
-      searchParams.set("checkOut", format(checkOutDate, "yyyy-MM-dd"))
+      searchParams.set("checkOut", format(checkOutDate, "yyyy-MM-dd"));
     }
     if (guests.adults !== 2) {
-      searchParams.set("adults", guests.adults.toString())
+      searchParams.set("adults", guests.adults.toString());
     }
     if (guests.children > 0) {
-      searchParams.set("children", guests.children.toString())
+      searchParams.set("children", guests.children.toString());
     }
 
-    router.push(`/search?${searchParams.toString()}`)
-  }
+    router.push(`/search?${searchParams.toString()}`);
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      handleSearch()
+      e.preventDefault();
+      handleSearch();
     }
-  }
+  };
 
-  const isDateDisabled = (date: Date) => {
-    return isBefore(date, new Date())
-  }
+  // Disable past dates for check-in
+  const isCheckInDateDisabled = (date: Date): boolean => {
+    return isBefore(date, new Date()); // block past dates
+  };
+
+  // Disable dates before check-in + 1 for check-out
+  const isCheckOutDateDisabled = (date: Date): boolean => {
+    return !checkInDate || isBefore(date, addDays(checkInDate, 1));
+  };
 
   if (variant === "hero") {
     return (
@@ -73,33 +96,37 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.6 }}
-        className={`bg-white rounded-2xl p-2 shadow-2xl max-w-5xl mx-auto backdrop-blur-sm ${className}`}
+        className={`bg-white/60 rounded-2xl p-2 shadow-2xl max-w-5xl mx-auto backdrop-blur-sm ${className}`}
       >
         {/* Desktop Search Bar */}
         <div className="hidden lg:grid lg:grid-cols-5 gap-2">
           <div className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors">
-            <MapPin className="h-5 w-5 text-gray-400 flex-shrink-0" />
+            <MapPin className="h-5 w-5 text-rose-500 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-semibold text-gray-900 mb-1">Where</p>
               <Input
                 placeholder="Search destinations"
-                className="border-0 p-0 text-sm placeholder:text-gray-500 focus-visible:ring-0 bg-transparent"
+                className="border-0 p-0 text-sm text-gray-700 placeholder:text-gray-500 focus-visible:ring-0 bg-transparent"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
               />
             </div>
           </div>
 
-          <div className="border-l border-gray-200">
+          <div className="border-l pl-2 border-gray-200">
             <Popover>
               <PopoverTrigger asChild>
                 <div className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer h-full">
-                  <Calendar className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  <Calendar className="h-5 w-5 text-rose-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-900 mb-1">Check in</p>
+                    <p className="text-xs font-semibold text-gray-900 mb-1">
+                      Check in
+                    </p>
                     <p className="text-sm text-gray-500 truncate">
-                      {checkInDate ? format(checkInDate, "MMM dd") : "Add dates"}
+                      {checkInDate
+                        ? format(checkInDate, "MMM dd")
+                        : "Add dates"}
                     </p>
                   </div>
                 </div>
@@ -109,22 +136,33 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                   mode="single"
                   selected={checkInDate}
                   onSelect={setCheckInDate}
-                  disabled={isDateDisabled}
+                  disabled={isCheckInDateDisabled}
+                  modifiersStyles={{
+                    disabled: {
+                      color: "#9CA3AF",
+                      fontSize: "0.8rem",
+                      cursor: "not-allowed",
+                    },
+                  }}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
           </div>
 
-          <div className="border-l border-gray-200">
+          <div className="border-l pl-2 border-gray-200">
             <Popover>
               <PopoverTrigger asChild>
                 <div className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer h-full">
-                  <Calendar className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                  <Calendar className="h-5 w-5 text-rose-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-900 mb-1">Check out</p>
+                    <p className="text-xs font-semibold text-gray-900 mb-1">
+                      Check out
+                    </p>
                     <p className="text-sm text-gray-500 truncate">
-                      {checkOutDate ? format(checkOutDate, "MMM dd") : "Add dates"}
+                      {checkOutDate
+                        ? format(checkOutDate, "MMM dd")
+                        : "Add dates"}
                     </p>
                   </div>
                 </div>
@@ -134,22 +172,29 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                   mode="single"
                   selected={checkOutDate}
                   onSelect={setCheckOutDate}
-                  disabled={(date) =>
-                    isDateDisabled(date) || (checkInDate ? isBefore(date, addDays(checkInDate, 1)) : false)
-                  }
+                  disabled={isCheckOutDateDisabled}
+                  modifiersStyles={{
+                    disabled: {
+                      color: "#9CA3AF",
+                      fontSize: "0.8rem",
+                      cursor: "not-allowed",
+                    },
+                  }}
                   initialFocus
                 />
               </PopoverContent>
             </Popover>
           </div>
 
-          <div className="border-l border-gray-200">
-            <Popover open={showGuestPicker} onOpenChange={setShowGuestPicker}>
+          <div className="border-l pl-2 border-gray-200">
+            <Popover>
               <PopoverTrigger asChild>
-                <div className="flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer h-full">
-                  <Users className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <div className="w-fit flex items-center gap-3 px-6 py-4 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer h-full">
+                  <Users className="h-5 w-5 text-rose-500 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-900 mb-1">Who</p>
+                    <p className="text-xs font-semibold text-gray-900 mb-1">
+                      Who
+                    </p>
                     <p className="text-sm text-gray-500 truncate">
                       {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
                     </p>
@@ -243,7 +288,9 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Pets</p>
-                      <p className="text-sm text-gray-500">Bringing a service animal?</p>
+                      <p className="text-sm text-gray-500">
+                        Bringing a service animal?
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Button
@@ -291,7 +338,7 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
               className="border-0 p-0 text-sm placeholder:text-gray-500 focus-visible:ring-0"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
             />
           </div>
 
@@ -301,8 +348,14 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                 <div className="flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer">
                   <Calendar className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="text-xs font-semibold text-gray-900">Check in</p>
-                    <p className="text-sm text-gray-500">{checkInDate ? format(checkInDate, "MMM dd") : "Add dates"}</p>
+                    <p className="text-xs font-semibold text-gray-900">
+                      Check in
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {checkInDate
+                        ? format(checkInDate, "MMM dd")
+                        : "Add dates"}
+                    </p>
                   </div>
                 </div>
               </PopoverTrigger>
@@ -310,8 +363,15 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                 <CalendarComponent
                   mode="single"
                   selected={checkInDate}
-                  onSelect={setCheckInDate}
-                  disabled={isDateDisabled}
+                  onSelect={(date) => date && setCheckInDate(date)}
+                  disabled={isCheckInDateDisabled}
+                  modifiersStyles={{
+                    disabled: {
+                      color: "#9CA3AF",
+                      fontSize: "0.8rem",
+                      cursor: "not-allowed",
+                    },
+                  }}
                   initialFocus
                 />
               </PopoverContent>
@@ -322,9 +382,13 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                 <div className="flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer">
                   <Calendar className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="text-xs font-semibold text-gray-900">Check out</p>
+                    <p className="text-xs font-semibold text-gray-900">
+                      Check out
+                    </p>
                     <p className="text-sm text-gray-500">
-                      {checkOutDate ? format(checkOutDate, "MMM dd") : "Add dates"}
+                      {checkOutDate
+                        ? format(checkOutDate, "MMM dd")
+                        : "Add dates"}
                     </p>
                   </div>
                 </div>
@@ -333,10 +397,15 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                 <CalendarComponent
                   mode="single"
                   selected={checkOutDate}
-                  onSelect={setCheckOutDate}
-                  disabled={(date) =>
-                    isDateDisabled(date) || (checkInDate ? isBefore(date, addDays(checkInDate, 1)) : false)
-                  }
+                  onSelect={(date) => date && setCheckOutDate(date)}
+                  disabled={isCheckOutDateDisabled}
+                  modifiersStyles={{
+                    disabled: {
+                      color: "#9CA3AF",
+                      fontSize: "0.8rem",
+                      cursor: "not-allowed",
+                    },
+                  }}
                   initialFocus
                 />
               </PopoverContent>
@@ -344,12 +413,14 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
           </div>
 
           <div className="flex items-center justify-between gap-3">
-            <Popover open={showGuestPicker} onOpenChange={setShowGuestPicker}>
+            <Popover>
               <PopoverTrigger asChild>
-                <div className="flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer flex-1">
+                <div className="flex items-center gap-3 px-4 py-3 border rounded-xl cursor-pointer flex-1 relative z-50">
                   <Users className="h-5 w-5 text-gray-400" />
                   <div>
-                    <p className="text-xs font-semibold text-gray-900">Guests</p>
+                    <p className="text-xs font-semibold text-gray-900">
+                      Guests
+                    </p>
                     <p className="text-sm text-gray-500">
                       {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
                     </p>
@@ -442,7 +513,9 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium">Pets</p>
-                      <p className="text-sm text-gray-500">Bringing a service animal?</p>
+                      <p className="text-sm text-gray-500">
+                        Bringing a service animal?
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <Button
@@ -478,7 +551,7 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
           </div>
         </div>
       </motion.div>
-    )
+    );
   }
 
   // Header variant (simplified)
@@ -495,17 +568,24 @@ export function SearchBar({ variant = "hero", className = "" }: SearchBarProps) 
         <Separator orientation="vertical" className="h-4" />
         <span className="text-sm text-gray-600">
           {checkInDate && checkOutDate
-            ? `${format(checkInDate, "MMM dd")} - ${format(checkOutDate, "MMM dd")}`
+            ? `${format(checkInDate, "MMM dd")} - ${format(
+                checkOutDate,
+                "MMM dd"
+              )}`
             : "Any week"}
         </span>
         <Separator orientation="vertical" className="h-4" />
         <span className="text-sm text-gray-600">
           {totalGuests} guest{totalGuests !== 1 ? "s" : ""}
         </span>
-        <Button size="sm" className="rounded-full bg-rose-500 hover:bg-rose-600" onClick={handleSearch}>
+        <Button
+          size="sm"
+          className="rounded-full bg-rose-500 hover:bg-rose-600"
+          onClick={handleSearch}
+        >
           <Search className="h-4 w-4" />
         </Button>
       </div>
     </div>
-  )
+  );
 }

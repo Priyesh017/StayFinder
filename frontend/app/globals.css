@@ -2,8 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+html,
 body {
   font-family: Arial, Helvetica, sans-serif;
+  overflow-x: hidden;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 @layer utilities {
