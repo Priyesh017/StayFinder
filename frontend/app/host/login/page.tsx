@@ -63,6 +63,7 @@ export default function HostAuthPage() {
           title: "Login Successful",
           description: "Welcome back to StayFinder!",
         });
+        router.push("/host");
       },
     });
   };

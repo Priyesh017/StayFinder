@@ -38,19 +38,24 @@ export default function HostDashboard() {
   const properties = useProperties();
   const bookingsQuery = useHostBookings();
   const bookings = bookingsQuery.data?.data ?? [];
-  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState("overview");
-  const hostQuery = useCurrentUser();
-  const host = hostQuery.data;
+
+  const { data: host, isLoading } = useCurrentUser(); // ensure useCurrentUser returns loading state
+  const router = useRouter();
 
   useEffect(() => {
-    if (!host) {
+    if (!isLoading && !host) {
       router.push("/host/login");
     }
-  }, [host, router]);
+  }, [host, isLoading, router]);
+
+  if (isLoading) {
+    return <div>Loading...</div>; // or a spinner
+  }
 
   if (!host) {
-    return null;
+    return null; // will redirect
   }
 
   // Filter properties and bookings for this host
@@ -104,7 +109,7 @@ export default function HostDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    localStorage.removeItem("stayfinder_host");
+                    localStorage.removeItem("stayfinder_host_token");
                     router.push("/host/login");
                   }}
                 >

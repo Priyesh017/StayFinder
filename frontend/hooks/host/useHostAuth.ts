@@ -29,9 +29,9 @@ export function useHostRegister() {
 
   return useMutation({
     mutationFn: (data: RegisterHostData) => registerHost(data),
-    onSuccess: ({ token, host }) => {
+    onSuccess: ({ data: { token, user } }) => {
       setToken(token);
-      setHost(host);
+      setHost(user);
       localStorage.setItem("stayfinder_host_token", token);
     },
   });

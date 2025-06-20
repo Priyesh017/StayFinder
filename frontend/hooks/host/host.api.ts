@@ -27,9 +27,7 @@ export async function loginHost(
   return res.json();
 }
 
-export async function registerHost(
-  data: RegisterHostData
-): Promise<{ token: string; host: Host }> {
+export async function registerHost(data: RegisterHostData): Promise<ltype> {
   const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

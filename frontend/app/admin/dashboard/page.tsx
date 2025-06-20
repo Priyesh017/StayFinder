@@ -255,7 +255,7 @@ export default function AdminDashboard() {
             </div>
             <Button
               onClick={() => {
-                localStorage.removeItem("stayfinder_admin");
+                localStorage.removeItem("stayfinder_host_token");
                 router.push("/admin/login");
               }}
               variant="outline"
