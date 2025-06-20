@@ -15,9 +15,9 @@ export function useHostLogin() {
   return useMutation({
     mutationFn: ({ email, password }: { email: string; password: string }) =>
       loginHost(email, password),
-    onSuccess: ({ token, host }) => {
+    onSuccess: ({ data: { token, user } }) => {
       setToken(token);
-      setHost(host);
+      setHost(user);
       localStorage.setItem("stayfinder_host_token", token);
     },
   });
