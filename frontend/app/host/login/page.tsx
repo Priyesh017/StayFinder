@@ -63,6 +63,7 @@ export default function HostAuthPage() {
           title: "Login Successful",
           description: "Welcome back to StayFinder!",
         });
+        router.push("/host");
       },
     });
   };
@@ -81,22 +82,25 @@ export default function HostAuthPage() {
       return;
     }
 
-    hostRegister.mutate(registerData, {
-      onSuccess: () => {
-        toast({
-          title: "Success",
-          description: "Account created successfully!",
-        });
-        router.push("/dashboard");
-      },
-      onError: () => {
-        toast({
-          title: "Error",
-          description: "Failed to create account",
-          variant: "destructive",
-        });
-      },
-    });
+    hostRegister.mutate(
+      { ...registerData, isHost: true },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Account created successfully!",
+          });
+          router.push("/dashboard");
+        },
+        onError: () => {
+          toast({
+            title: "Error",
+            description: "Failed to create account",
+            variant: "destructive",
+          });
+        },
+      }
+    );
   };
 
   return (

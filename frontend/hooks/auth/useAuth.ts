@@ -16,10 +16,13 @@ import type {
 
 // Utility
 const storeToken = (token: string) => localStorage.setItem("token", token);
-const clearToken = () => localStorage.removeItem("token");
+const clearToken = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("stayfinder_host_token");
+};
 
 export const useCurrentUser = () =>
-  useQuery<User>({
+  useQuery({
     queryKey: ["auth", "user"],
     queryFn: getCurrentUser,
     staleTime: 5 * 60 * 1000, // 5 minutes

@@ -6,15 +6,19 @@ export interface RegisterHostData {
   email: string;
   password: string;
   phone: string;
+  isHost: boolean;
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
+interface ltype {
+  data: { token: string; user: Host };
+}
 export async function loginHost(
   email: string,
   password: string
-): Promise<{ token: string; host: Host }> {
-  const res = await fetch(`${API_URL}/host/login`, {
+): Promise<ltype> {
+  const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
@@ -23,10 +27,8 @@ export async function loginHost(
   return res.json();
 }
 
-export async function registerHost(
-  data: RegisterHostData
-): Promise<{ token: string; host: Host }> {
-  const res = await fetch(`${API_URL}/host/register`, {
+export async function registerHost(data: RegisterHostData): Promise<ltype> {
+  const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -36,7 +38,7 @@ export async function registerHost(
 }
 
 export async function fetchHost(token: string): Promise<Host> {
-  const res = await fetch(`${API_URL}/host/me`, {
+  const res = await fetch(`${API_URL}/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error("Invalid or expired token");

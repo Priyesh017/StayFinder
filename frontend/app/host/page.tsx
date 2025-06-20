@@ -38,39 +38,44 @@ export default function HostDashboard() {
   const properties = useProperties();
   const bookingsQuery = useHostBookings();
   const bookings = bookingsQuery.data?.data ?? [];
-  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState("overview");
-  const hostQuery = useCurrentUser();
-  const host = hostQuery.data;
+
+  const { data: host, isLoading } = useCurrentUser(); // ensure useCurrentUser returns loading state
+  const router = useRouter();
 
   useEffect(() => {
-    if (!host) {
+    if (!isLoading && !host) {
       router.push("/host/login");
     }
-  }, [host, router]);
+  }, [host, isLoading, router]);
+
+  if (isLoading) {
+    return <div>Loading...</div>; // or a spinner
+  }
 
   if (!host) {
-    return null;
+    return null; // will redirect
   }
 
   // Filter properties and bookings for this host
-  const hostProperties = properties.filter((p: Property) =>
-    host.properties.includes(p.id)
-  );
-  const hostBookings = bookings.filter((b: Booking) =>
-    hostProperties.some((p: Property) => p.id === b.id)
-  );
+  // const hostProperties = properties.filter((p: Property) =>
+  //   host.properties.includes(p.id)
+  // );
+  // const hostBookings = bookings.filter((b: Booking) =>
+  //   hostProperties.some((p: Property) => p.id === b.id)
+  // );
 
-  const totalEarnings = hostBookings.reduce(
-    (sum: number, booking: Booking) => sum + booking.totalPrice,
-    0
-  );
-  const totalBookings = hostBookings.length;
-  const averageRating =
-    hostProperties.reduce(
-      (sum: number, property: Property) => sum + property.rating,
-      0
-    ) / hostProperties.length || 0;
+  // const totalEarnings = hostBookings.reduce(
+  //   (sum: number, booking: Booking) => sum + booking.totalPrice,
+  //   0
+  // );
+  // const totalBookings = hostBookings.length;
+  // const averageRating =
+  //   hostProperties.reduce(
+  //     (sum: number, property: Property) => sum + property.rating,
+  //     0
+  //   ) / hostProperties.length || 0;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -104,7 +109,7 @@ export default function HostDashboard() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    localStorage.removeItem("stayfinder_host");
+                    localStorage.removeItem("stayfinder_host_token");
                     router.push("/host/login");
                   }}
                 >
@@ -145,7 +150,7 @@ export default function HostDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      ${totalEarnings.toLocaleString()}
+                      {/* ${totalEarnings.toLocaleString()} */}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       +12% from last month
@@ -161,7 +166,7 @@ export default function HostDashboard() {
                     <Calendar className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{totalBookings}</div>
+                    {/* <div className="text-2xl font-bold">{totalBookings}</div> */}
                     <p className="text-xs text-muted-foreground">
                       +8% from last month
                     </p>
@@ -177,7 +182,7 @@ export default function HostDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {averageRating.toFixed(1)}
+                      {/* {averageRating.toFixed(1)} */}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Across all properties
@@ -194,14 +199,14 @@ export default function HostDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {
+                      {/* {
                         hostProperties.filter(
                           (l: Listing) => l.status === "APPROVED"
                         ).length
-                      }
+                      } */}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Out of {hostProperties.length} total
+                      {/* Out of {hostProperties.length} total */}
                     </p>
                   </CardContent>
                 </Card>
@@ -222,7 +227,7 @@ export default function HostDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {hostBookings.slice(0, 5).map((booking: Booking) => (
+                      {/* {hostBookings.slice(0, 5).map((booking: Booking) => (
                         <div
                           key={booking.id}
                           className="flex items-center justify-between p-4 border rounded-lg"
@@ -263,7 +268,7 @@ export default function HostDashboard() {
                             </span>
                           </div>
                         </div>
-                      ))}
+                      ))} */}
                     </div>
                   </CardContent>
                 </Card>
@@ -277,7 +282,7 @@ export default function HostDashboard() {
                 transition={{ duration: 0.6 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {hostProperties.map((listing: Listing, index: number) => (
+                {/* {hostProperties.map((listing: Listing, index: number) => (
                   <motion.div
                     key={listing.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -355,7 +360,7 @@ export default function HostDashboard() {
                       </CardContent>
                     </Card>
                   </motion.div>
-                ))}
+                ))} */}
               </motion.div>
             </TabsContent>
 
@@ -374,7 +379,7 @@ export default function HostDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {hostBookings.map((booking: Booking) => (
+                      {/* {hostBookings.map((booking: Booking) => (
                         <div
                           key={booking.id}
                           className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
@@ -421,7 +426,7 @@ export default function HostDashboard() {
                             </Button>
                           </div>
                         </div>
-                      ))}
+                      ))} */}
                     </div>
                   </CardContent>
                 </Card>
